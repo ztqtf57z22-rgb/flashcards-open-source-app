@@ -223,7 +223,20 @@ Lektor działa także przy wyciszonym iPhonie (przełącznik z boku) – głośn
 3. W lekcji są cztery zajęcia: **🃏 Słówka** (obrazek + lektor; stuknięcie odwraca kartę i czyta po polsku),
    **🎯 Zgadnij obrazek**, **🧩 Zadania** (gwiazdka za trafienie za pierwszym razem; stuknij polecenie, by je usłyszeć)
    i **📖 Gramatyka** (stuknij zdanie angielskie lub polskie, by je usłyszeć).
-4. W **⚙️** rodzic ustawia klucz Claude, lektora, przesyłanie lekcji i synchronizację.
+4. W **⚙️** rodzic ustawia klucz Claude, **styl obrazków**, lektora, przesyłanie lekcji i synchronizację.
+
+### Styl obrazków i maskotka Nocka
+
+W **⚙️ → Styl obrazków** wybierasz (z podglądem):
+
+- **Podręcznik** – czytelne, kolorowe obrazki jak w podręczniku,
+- **Słodki gotyk z Nocką** – fiolet, róż i czerń, buźki, skrzydełka i gwiazdki; na części obrazków pojawia się
+  **Nocka**, maskotka klubu (fioletowy nietoperek z wielką kredką),
+- **Pastelowe kawaii** – miękkie pastele, uśmiechnięte buźki i serduszka.
+
+Nowe kartki Claude rysuje w wybranym stylu. Do starszych lekcji obrazki w nowym stylu dorysujesz z menu
+**⋯ → Narysuj obrazki: …** w lekcji. Rysunki każdego stylu zostają zapamiętane, więc przełączanie stylów nic nie kasuje.
+Nocka wita dziecko na ekranie głównym i chwali za dobre odpowiedzi w quizie.
 
 **Wskazówki do zdjęcia:** dobre światło, kartka płasko i w całości w kadrze.
 

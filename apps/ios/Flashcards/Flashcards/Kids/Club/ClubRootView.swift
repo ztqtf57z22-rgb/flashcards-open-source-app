@@ -134,6 +134,7 @@ struct ClubRootView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     VStack(spacing: 4) {
+                        ClubMascotView(size: 110)
                         Text("🎨 Play & Learn Club")
                             .font(.system(size: 32, weight: .heavy, design: .rounded))
                         Text("Wybierz lekcję albo zrób zdjęcie nowej kartki")

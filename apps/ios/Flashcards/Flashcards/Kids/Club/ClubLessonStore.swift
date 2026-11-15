@@ -111,8 +111,9 @@ final class ClubLessonStore {
             self.illustrationError = ClubClaudeError.missingAPIKey.errorDescription
             return
         }
+        let style = ClubStyleSettings.shared.style
         let requests = lesson.words
-            .filter { $0.svg == nil }
+            .filter { $0.picture(style: style) == nil }
             .map { ClubClaudeClient.IllustrationRequest(english: $0.english, polish: $0.polish) }
         guard requests.isEmpty == false else { return }
         self.illustrationError = nil
@@ -123,6 +124,7 @@ final class ClubLessonStore {
             do {
                 let drawings = try await ClubClaudeClient.makeIllustrations(
                     words: requests,
+                    style: style,
                     apiKey: apiKey,
                     onProgress: { done, total in
                         if ClubLessonStore.shared.illustrationProgress[lessonId] != nil {
@@ -130,7 +132,7 @@ final class ClubLessonStore {
                         }
                     }
                 )
-                self.applyIllustrations(lessonId: lessonId, drawings: drawings)
+                self.applyIllustrations(lessonId: lessonId, drawings: drawings, style: style)
                 if drawings.count < requests.count {
                     self.illustrationError = "Narysowano \(drawings.count) z \(requests.count) obrazków. Brakujące możesz dorysować z menu ⋯ w lekcji."
                 }
@@ -140,14 +142,14 @@ final class ClubLessonStore {
         }
     }
 
-    private func applyIllustrations(lessonId: UUID, drawings: [String: String]) {
+    private func applyIllustrations(lessonId: UUID, drawings: [String: String], style: ClubIllustrationStyle) {
         guard let index = self.lessons.firstIndex(where: { $0.id == lessonId }) else { return }
         var changed = false
         for wordIndex in self.lessons[index].words.indices {
             let english = self.lessons[index].words[wordIndex].english
-            if self.lessons[index].words[wordIndex].svg == nil, let svg = drawings[english],
+            if self.lessons[index].words[wordIndex].picture(style: style) == nil, let svg = drawings[english],
                ClubSVGCache.drawing(for: svg) != nil {
-                self.lessons[index].words[wordIndex].svg = svg
+                self.lessons[index].words[wordIndex].setPicture(svg, style: style)
                 changed = true
             }
         }
@@ -172,8 +174,7 @@ final class ClubLessonStore {
                         self.lessons[index].bestStars = incoming.bestStars
                         changed = true
                     }
-                    if incoming.illustrationCount > self.lessons[index].illustrationCount {
-                        self.lessons[index].words = incoming.words
+                    if self.lessons[index].mergeIllustrations(from: incoming) {
                         changed = true
                     }
                 } else {
@@ -282,8 +283,7 @@ final class ClubLessonStore {
 
         for lesson in output.remoteLessons where self.deletedIds.contains(lesson.id) == false {
             if let index = self.lessons.firstIndex(where: { $0.id == lesson.id }) {
-                if lesson.illustrationCount > self.lessons[index].illustrationCount {
-                    self.lessons[index].words = lesson.words
+                if self.lessons[index].mergeIllustrations(from: lesson) {
                     changed = true
                 }
             } else {

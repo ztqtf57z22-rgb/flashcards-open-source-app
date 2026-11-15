@@ -22,14 +22,79 @@ struct ClubWord: Codable, Identifiable, Hashable, Sendable {
     var emoji: String
     /// Nagłówek z kartki, np. „Unit 2 Vocabulary” albo „Experiment Lab”.
     var group: String
-    /// Ilustracja SVG narysowana przez Claude (nil = pokazujemy emoji).
+    /// Ilustracja SVG w stylu „Podręcznik” (pole z pierwszej wersji; nil = brak).
     var svg: String? = nil
+    /// Ilustracje w pozostałych stylach: klucz to `ClubIllustrationStyle.rawValue`.
+    var styledSVGs: [String: String]? = nil
+}
+
+extension ClubWord {
+    /// Rysunek w danym stylu (nil, jeśli jeszcze nie narysowany).
+    func picture(style: ClubIllustrationStyle) -> String? {
+        if let styled = self.styledSVGs?[style.rawValue] {
+            return styled
+        }
+        return style == .textbook ? self.svg : nil
+    }
+
+    /// Rysunek do pokazania: najpierw w wybranym stylu, a gdy go brak – w dowolnym innym.
+    func picture(preferring style: ClubIllustrationStyle) -> String? {
+        if let preferred = self.picture(style: style) {
+            return preferred
+        }
+        for other in ClubIllustrationStyle.allCases where other != style {
+            if let picture = self.picture(style: other) {
+                return picture
+            }
+        }
+        return nil
+    }
+
+    mutating func setPicture(_ svg: String, style: ClubIllustrationStyle) {
+        if style == .textbook {
+            self.svg = svg
+        } else {
+            var styled = self.styledSVGs ?? [:]
+            styled[style.rawValue] = svg
+            self.styledSVGs = styled
+        }
+    }
+
+    /// Wszystkie rysunki tego słówka (styl → SVG).
+    var allPictures: [String: String] {
+        var result = self.styledSVGs ?? [:]
+        if let svg = self.svg, result[ClubIllustrationStyle.textbook.rawValue] == nil {
+            result[ClubIllustrationStyle.textbook.rawValue] = svg
+        }
+        return result
+    }
 }
 
 extension ClubLesson {
-    /// Ile słówek ma już ilustrację od Claude.
+    /// Ile słówek ma rysunek w danym stylu.
+    func illustrationCount(style: ClubIllustrationStyle) -> Int {
+        self.words.filter { $0.picture(style: style) != nil }.count
+    }
+
+    /// Liczba wszystkich rysunków (we wszystkich stylach) – do porównań przy synchronizacji.
     var illustrationCount: Int {
-        self.words.filter { $0.svg != nil }.count
+        self.words.reduce(0) { $0 + $1.allPictures.count }
+    }
+
+    /// Dokłada rysunki z innej kopii tej samej lekcji (np. z iPada). Zwraca true, gdy coś doszło.
+    @discardableResult
+    mutating func mergeIllustrations(from other: ClubLesson) -> Bool {
+        var changed = false
+        for index in self.words.indices {
+            guard let otherWord = other.words.first(where: { $0.id == self.words[index].id }) else { continue }
+            let mine = self.words[index].allPictures
+            for (styleKey, svg) in otherWord.allPictures where mine[styleKey] == nil {
+                guard let style = ClubIllustrationStyle(rawValue: styleKey) else { continue }
+                self.words[index].setPicture(svg, style: style)
+                changed = true
+            }
+        }
+        return changed
     }
 }
 

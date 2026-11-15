@@ -147,6 +147,43 @@ struct ClubParentSettingsView: View {
                     """)
                 }
 
+                Section {
+                    ForEach(ClubIllustrationStyle.allCases) { style in
+                        Button {
+                            ClubStyleSettings.shared.style = style
+                        } label: {
+                            HStack(spacing: 12) {
+                                if let drawing = ClubSVGCache.drawing(for: style.sampleSVG) {
+                                    ClubSVGView(drawing: drawing)
+                                        .frame(width: 64, height: 64)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(style.title)
+                                        .font(.headline)
+                                        .foregroundStyle(Color.primary)
+                                    Text(style.subtitle)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if ClubStyleSettings.shared.style == style {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(KidPalette.grass)
+                                        .font(.title2)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Styl obrazków")
+                } footer: {
+                    Text("""
+                    Nowe kartki Claude narysuje w wybranym stylu. Do starszych lekcji dorysujesz obrazki z menu ⋯ \
+                    w lekcji. Rysunki każdego stylu są zapamiętane – możesz przełączać style bez rysowania od nowa; \
+                    gdy w danym stylu rysunku brak, pokazujemy rysunek z innego stylu.
+                    """)
+                }
+
                 self.narratorSection(language: .english)
                 self.narratorSection(language: .polish)
                 Section {

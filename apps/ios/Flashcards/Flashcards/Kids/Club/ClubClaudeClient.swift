@@ -147,6 +147,7 @@ enum ClubClaudeClient {
     /// Zwraca słownik „angielskie słowo → SVG”. Brakujący rysunek nie przerywa całości (zostaje emoji).
     static func makeIllustrations(
         words: [IllustrationRequest],
+        style: ClubIllustrationStyle,
         apiKey: String,
         onProgress: @escaping @MainActor @Sendable (Int, Int) -> Void
     ) async throws -> [String: String] {
@@ -163,7 +164,7 @@ enum ClubClaudeClient {
             var pending = batches.makeIterator()
             for _ in 0..<3 {
                 if let batch = pending.next() {
-                    group.addTask { await self.drawBatchResult(words: batch, apiKey: apiKey) }
+                    group.addTask { await self.drawBatchResult(words: batch, style: style, apiKey: apiKey) }
                 }
             }
             for await result in group {
@@ -175,7 +176,7 @@ enum ClubClaudeClient {
                 }
                 await onProgress(min(drawn.count, total), total)
                 if let batch = pending.next() {
-                    group.addTask { await self.drawBatchResult(words: batch, apiKey: apiKey) }
+                    group.addTask { await self.drawBatchResult(words: batch, style: style, apiKey: apiKey) }
                 }
             }
         }
@@ -186,18 +187,26 @@ enum ClubClaudeClient {
         return drawn
     }
 
-    private static func drawBatchResult(words: [IllustrationRequest], apiKey: String) async -> Result<[String: String], Error> {
+    private static func drawBatchResult(
+        words: [IllustrationRequest],
+        style: ClubIllustrationStyle,
+        apiKey: String
+    ) async -> Result<[String: String], Error> {
         do {
-            return .success(try await self.drawBatch(words: words, apiKey: apiKey))
+            return .success(try await self.drawBatch(words: words, style: style, apiKey: apiKey))
         } catch {
             return .failure(error)
         }
     }
 
-    private static func drawBatch(words: [IllustrationRequest], apiKey: String) async throws -> [String: String] {
+    private static func drawBatch(
+        words: [IllustrationRequest],
+        style: ClubIllustrationStyle,
+        apiKey: String
+    ) async throws -> [String: String] {
         let list = words.map { "- \($0.english) (po polsku: \($0.polish))" }.joined(separator: "\n")
         let json = try await self.requestJSON(
-            system: clubIllustratorPrompt,
+            system: clubIllustratorPrompt + "\n\nSTYL RYSUNKÓW (obowiązuje dla każdego obrazka):\n" + style.promptDescription,
             content: [["type": "text", "text": "Narysuj ilustracje do tych słówek:\n\(list)"]],
             schema: clubIllustrationsJSONSchema(),
             effort: "medium",
@@ -384,8 +393,7 @@ private func clubLessonJSONSchema() -> [String: Any] {
 
 private let clubIllustratorPrompt = """
 Jesteś ilustratorem podręczników do angielskiego dla 7-letnich dzieci. Do każdego słówka rysujesz jedną \
-ilustrację w formacie SVG, w spójnym stylu: płaska grafika wektorowa jak w dobrym podręczniku dla dzieci, \
-jasne i radosne kolory, wyraźny ciemny kontur.
+ilustrację w formacie SVG, wszystkie w jednym, spójnym stylu opisanym na końcu tego polecenia.
 
 Wymagania techniczne (aplikacja rysuje tylko taki podzbiór SVG):
 - Element główny: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">. Rysunek wyśrodkowany, \
@@ -397,8 +405,8 @@ fill-rule, transform (tylko translate, rotate, scale), oraz geometria (x, y, wid
 r, x1, y1, x2, y2, points, d).
 - W atrybucie d używaj tylko komend M, L, H, V, C, S, Q, T, Z (wielkie lub małe). Bez łuków A – koła \
 i owale rysuj elementami circle/ellipse.
-- Kolory jako #rrggbb. Kontur: stroke="#2b2b2b", stroke-width od 2 do 3, stroke-linejoin="round", \
-stroke-linecap="round".
+- Kolory jako #rrggbb. Kontur zgodny ze stylem (domyślnie stroke="#2b2b2b", stroke-width od 2 do 3), \
+stroke-linejoin="round", stroke-linecap="round".
 - Najwyżej ok. 40 elementów i 3000 znaków na rysunek.
 
 Treść:

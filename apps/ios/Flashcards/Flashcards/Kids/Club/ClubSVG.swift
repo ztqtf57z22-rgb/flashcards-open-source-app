@@ -30,7 +30,8 @@ struct ClubWordPicture: View {
     var size: CGFloat
 
     var body: some View {
-        if let svg = self.word.svg, let drawing = ClubSVGCache.drawing(for: svg) {
+        if let svg = self.word.picture(preferring: ClubStyleSettings.shared.style),
+           let drawing = ClubSVGCache.drawing(for: svg) {
             ClubSVGView(drawing: drawing)
                 .frame(width: self.size, height: self.size)
                 .accessibilityHidden(true)

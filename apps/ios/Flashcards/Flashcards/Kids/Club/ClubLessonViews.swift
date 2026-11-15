@@ -66,8 +66,8 @@ struct ClubLessonView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     if let lesson = self.lessonStore.lesson(id: self.lessonId) {
-                        if lesson.illustrationCount < lesson.words.count {
-                            Button("Narysuj obrazki (Claude)", systemImage: "paintbrush.pointed") {
+                        if lesson.illustrationCount(style: ClubStyleSettings.shared.style) < lesson.words.count {
+                            Button("Narysuj obrazki: \(ClubStyleSettings.shared.style.title)", systemImage: "paintbrush.pointed") {
                                 self.lessonStore.illustrate(lessonId: lesson.id)
                             }
                             .disabled(self.lessonStore.isIllustrating(lessonId: lesson.id))
@@ -389,6 +389,7 @@ struct ClubQuizView: View {
 
                 if isAnsweredCorrectly {
                     VStack(spacing: 8) {
+                        ClubMascotView(size: 90, holdsCrayon: false)
                         Text(self.praise[self.index % self.praise.count])
                             .font(.system(size: 34, weight: .heavy, design: .rounded))
                             .foregroundStyle(KidPalette.grass)
@@ -465,8 +466,11 @@ struct ClubQuizView: View {
         let trophies = clubTrophyLevel(stars: self.stars, total: self.exercises.count)
         return VStack(spacing: 20) {
             Spacer()
-            Text(trophies == 3 ? "🏆" : "🎉")
-                .font(.system(size: 120))
+            ZStack(alignment: .bottomTrailing) {
+                ClubMascotView(size: 150, holdsCrayon: false)
+                Text(trophies == 3 ? "🏆" : "🎉")
+                    .font(.system(size: 54))
+            }
             Text("Koniec! Zdobyte gwiazdki: \(self.stars) z \(self.exercises.count)")
                 .font(.system(.title, design: .rounded).weight(.heavy))
                 .multilineTextAlignment(.center)
