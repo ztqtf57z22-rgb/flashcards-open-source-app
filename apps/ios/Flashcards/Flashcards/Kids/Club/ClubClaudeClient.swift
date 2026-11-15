@@ -321,7 +321,7 @@ private func clubPreparedJPEG(image: UIImage) -> Data? {
 
 // MARK: - Polecenia dla Claude
 
-private let clubSystemPrompt = """
+let clubSystemPrompt = """
 Jesteś nauczycielem angielskiego dla 7-letniego polskiego dziecka. Rodzic robi zdjęcie kartki z zajęć \
 „Play & Learn Club”, a Ty zamieniasz ją w kolorową lekcję w aplikacji. Dziecko dopiero uczy się czytać, \
 więc wszystko ma być krótkie, proste i wesołe.
@@ -391,7 +391,7 @@ private func clubLessonJSONSchema() -> [String: Any] {
 
 // MARK: - Ilustrator
 
-private let clubIllustratorPrompt = """
+let clubIllustratorPrompt = """
 Jesteś ilustratorem podręczników do angielskiego dla 7-letnich dzieci. Do każdego słówka rysujesz jedną \
 ilustrację w formacie SVG, wszystkie w jednym, spójnym stylu opisanym na końcu tego polecenia.
 

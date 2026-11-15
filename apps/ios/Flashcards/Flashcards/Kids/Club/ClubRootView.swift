@@ -238,6 +238,7 @@ func clubTrophyLevel(stars: Int, total: Int) -> Int {
 
 struct ClubScanView: View {
     let onFinish: (ClubLesson?) -> Void
+    @Environment(ClubLessonStore.self) private var lessonStore: ClubLessonStore
 
     private enum Phase: Equatable {
         case start
@@ -309,44 +310,72 @@ struct ClubScanView: View {
 
     private var startScreen: some View {
         ScrollView {
-            VStack(spacing: 22) {
+            VStack(spacing: 18) {
                 Text("📸✨🧠")
-                    .font(.system(size: 72))
-                    .padding(.top, 16)
-                Text("Zrób zdjęcie kartki z klubu, a Claude zamieni ją w lekcję z obrazkami, quizem i zadaniami!")
-                    .font(.system(.title3, design: .rounded).weight(.semibold))
+                    .font(.system(size: 64))
+                    .padding(.top, 8)
+                Text("Nowa kartka z klubu")
+                    .font(.system(.title2, design: .rounded).weight(.heavy))
+                Text("Claude w aplikacji na telefonie zamieni zdjęcie kartki w lekcję z obrazkami (styl: \(ClubStyleSettings.shared.style.title)).")
+                    .font(.system(.callout, design: .rounded))
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
-                if self.hasAPIKey == false {
-                    Text("Brak klucza Claude – odczytam tylko słówka bez zadań. Rodzic może dodać klucz w ustawieniach (⚙️).")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding()
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                }
-
-                if WorksheetDocumentScanner.isSupported {
-                    Button {
-                        self.isScannerPresented = true
-                    } label: {
-                        ClubBigButtonLabel(title: "Zrób zdjęcie kartki", systemImage: "camera.fill", color: KidPalette.orange)
+                ClubClaudeAppSteps(
+                    copyTitle: "Kopiuj polecenie dla Claude",
+                    prompt: { clubClaudeAppLessonPrompt(style: ClubStyleSettings.shared.style) },
+                    pasteTitle: "Wklej lekcję od Claude",
+                    attachPhotoHint: true,
+                    onResponseText: { self.handleClaudeResponse(text: $0) },
+                    onFile: { url in
+                        do {
+                            self.handleClaudeResponse(text: try clubReadText(url: url))
+                        } catch {
+                            self.errorMessage = error.localizedDescription
+                        }
                     }
-                    .buttonStyle(.plain)
-                }
+                )
 
-                PhotosPicker(selection: self.$photoSelection, matching: .images) {
-                    ClubBigButtonLabel(title: "Wybierz z galerii", systemImage: "photo.on.rectangle.angled", color: KidPalette.sky)
+                VStack(spacing: 10) {
+                    Text(self.hasAPIKey
+                         ? "Automatycznie przez klucz API Claude"
+                         : "Bez Claude (tylko słówka, bez obrazków i zadań)")
+                        .font(.system(.footnote, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        if WorksheetDocumentScanner.isSupported {
+                            Button {
+                                self.isScannerPresented = true
+                            } label: {
+                                Label("Zdjęcie", systemImage: "camera")
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        PhotosPicker(selection: self.$photoSelection, matching: .images) {
+                            Label("Z galerii", systemImage: "photo")
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
-                .buttonStyle(.plain)
-
-                Text("Wskazówka: kartka płasko, w całości w kadrze, w dobrym świetle.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                .padding(.top, 8)
             }
             .padding()
             .frame(maxWidth: 600)
             .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// Odpowiedź z aplikacji Claude: nowa lekcja zamyka ekran i otwiera lekcję; inne wyniki pokazują komunikat.
+    private func handleClaudeResponse(text: String) {
+        do {
+            switch try clubParseClaudeAppResponse(text) {
+            case .lesson(let lesson):
+                self.onFinish(lesson)
+            case .illustrations, .package:
+                self.errorMessage = self.lessonStore.importClaudeAppResponse(text, targetLessonId: nil).message
+            }
+        } catch {
+            self.errorMessage = error.localizedDescription
         }
     }
 
@@ -396,6 +425,7 @@ struct ClubScanView: View {
         self.workingStep = 0
         Task { @MainActor in
             do {
+                // Z kluczem API kartkę czyta Claude (automatycznie); bez niego – odczyt samych słówek na telefonie.
                 let lesson: ClubLesson
                 if let apiKey = ClubAPIKeyStore.load() {
                     let draft = try await ClubClaudeClient.makeLesson(images: images, apiKey: apiKey)

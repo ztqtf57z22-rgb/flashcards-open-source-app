@@ -132,6 +132,8 @@ struct ClubLessonDraft: Codable, Sendable {
         let polish: String
         let emoji: String
         let group: String
+        /// Rysunek SVG – obecny, gdy lekcję przygotował Claude w aplikacji (z obrazkami od razu).
+        let svg: String?
     }
 
     struct Example: Codable, Sendable {
@@ -157,6 +159,8 @@ struct ClubLessonDraft: Codable, Sendable {
 
     let title: String
     let themeEmoji: String
+    /// Styl rysunków (`ClubIllustrationStyle.rawValue`), gdy plik zawiera obrazki.
+    let style: String?
     let vocabulary: [Word]
     let grammar: [Grammar]
     let exercises: [Exercise]
@@ -173,8 +177,12 @@ struct ClubLessonDraft: Codable, Sendable {
             createdAt: now,
             title: self.title,
             themeEmoji: self.themeEmoji,
-            words: self.vocabulary.map {
-                ClubWord(id: UUID(), english: $0.english, polish: $0.polish, emoji: $0.emoji, group: $0.group)
+            words: self.vocabulary.map { item in
+                var word = ClubWord(id: UUID(), english: item.english, polish: item.polish, emoji: item.emoji, group: item.group)
+                if let svg = item.svg, svg.contains("<svg") {
+                    word.setPicture(svg, style: self.style.flatMap(ClubIllustrationStyle.init(rawValue:)) ?? .textbook)
+                }
+                return word
             },
             grammar: self.grammar.map { note in
                 ClubGrammarNote(

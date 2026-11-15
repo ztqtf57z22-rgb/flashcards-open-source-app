@@ -19,7 +19,7 @@ Aplikację kompiluje serwer GitHuba w internecie (to jego maszyna, nie Twoja). P
 | **AltStore** *albo* **SideStore** (do wyboru, krok 2) | instaluje aplikację Twoim Apple ID i co tydzień ją odświeża | darmowe |
 | **Apple ID** | podpis aplikacji (to samo konto, co w App Store) | darmowe |
 | **iCloud Drive** (na obu urządzeniach) | synchronizacja lekcji i wyników klubu | darmowe (5 GB) |
-| Klucz **Claude API** | zamiana zdjęcia kartki w lekcję | kilka–kilkanaście groszy za kartkę |
+| Aplikacja **Claude** z abonamentem **Pro** | zamiana zdjęcia kartki w lekcję z obrazkami | w ramach abonamentu |
 
 > **Jedno ograniczenie darmowego Apple ID:** aplikacja jest ważna **7 dni** i trzeba ją odświeżać. Dane i lekcje
 > nie znikają, nawet gdy termin minie. Widżety i aplikacja na zegarek są w tej wersji wyłączone.
@@ -170,7 +170,6 @@ W **⚙️** klubu (dla rodzica) są też przyciski **Wyślij wszystkie lekcje (
 | Co | Jak się synchronizuje |
 |---|---|
 | **Lekcje klubu, gwiazdki i wyniki** | Wspólny folder w **iCloud Drive** wybrany w aplikacji (na obu urządzeniach ten sam) |
-| **Klucz Claude** | Wpisz go na każdym urządzeniu (raz) – patrz krok 5 |
 
 #### Ustawienie folderu (raz na każdym urządzeniu)
 
@@ -186,20 +185,19 @@ Od teraz kartka zeskanowana na iPhonie pojawi się na iPadzie i odwrotnie. To sa
 (zawsze zostaje lepszy wynik) i usuniętych lekcji. Gdy klub jest otwarty, aplikacja sprawdza zmiany co ok. 30 sekund.
 Można też stuknąć **⚙️ → Synchronizuj teraz**. iCloud zwykle przesyła zmiany w kilka sekund, czasem w kilka minut.
 
-## Krok 5. Klucz Claude
+## Krok 5. Aplikacja Claude (abonament Pro) – bez klucza API
 
-> Jeśli zdjęcia kartek robisz tylko na iPhonie i przesyłasz lekcje przez AirDrop, klucz wpisz **tylko na iPhonie** –
-> iPad dostaje gotowe lekcje i klucza nie potrzebuje.
+Lekcje i obrazki przygotowuje **aplikacja Claude na iPhonie** w ramach Twojego abonamentu Pro.
+Fiszki nie łączą się z Claude same – tylko kopiujesz polecenie i wklejasz odpowiedź (schowek). Klucz API nie jest potrzebny.
 
-1. Na komputerze wejdź na **platform.claude.com**, załóż konto i w **Billing** dodaj np. 5 USD kredytu.
-2. **Settings → API Keys → Create Key** – skopiuj klucz (zaczyna się od `sk-ant-`) i zapisz go np. w Notatkach.
-3. Na iPhonie: **⚙️** (prawy górny róg) → rozwiąż mnożenie → wklej klucz → **Zapisz klucz**. Na iPadzie zrób to samo
-   (czasem klucz przejdzie sam przez pęk kluczy iCloud – wtedy zobaczysz „Klucz jest zapisany”).
+1. Zainstaluj z App Store aplikację **Claude** (od Anthropic) i zaloguj się kontem z abonamentem Pro.
+2. W Claude wybierz najmocniejszy dostępny model (np. Opus) – lepiej rysuje i dokładniej czyta kartki.
+3. *(Opcjonalnie, wygodniej)* Utwórz w Claude **Projekt** „Play & Learn Club” i w jego instrukcjach wklej polecenie
+   skopiowane z Fiszek (**Nowa kartka 📸 → Kopiuj polecenie dla Claude**). Wtedy przy kolejnych kartkach w tym
+   projekcie wystarczy wysłać samo zdjęcie.
 
-> Bez klucza klub też działa, ale ze zdjęcia odczyta tylko słówka (bez zadań, gramatyki i rysunków).
-
-**Koszt:** odczyt kartki to kilka–kilkanaście groszy, a narysowanie ilustracji do ok. 20 słówek – zwykle
-ok. 0,5–1,5 zł (Claude rysuje każdy obrazek osobno). Rysunki powstają raz i zostają w lekcji.
+> Klucz API (płatny osobno) jest już tylko opcją w **⚙️ → Opcjonalnie: klucz API** – z nim wszystko dzieje się
+> automatycznie, bez kopiowania. Przy abonamencie Pro go nie potrzebujesz.
 
 ## Krok 6. Lektor – najlepsze głosy (raz na każdym urządzeniu)
 
@@ -216,14 +214,33 @@ Lektor działa także przy wyciszonym iPhonie (przełącznik z boku) – głośn
 
 ## Krok 7. Jak korzystać z klubu
 
-1. Po uruchomieniu od razu widać **Play & Learn Club**. Stuknij **Nowa kartka 📸** → **Zrób zdjęcie kartki**
-   (aparat sam wykryje i wyprostuje kartkę) albo **Wybierz z galerii**.
-2. Po ok. minucie lekcja otworzy się sama, a Claude zacznie **rysować obrazki** (widać pasek „Claude rysuje
-   obrazki… 5/18”). Do tego czasu przy słówkach są emoji. Brakujące rysunki dorysujesz z menu **⋯ → Narysuj obrazki (Claude)**.
-3. W lekcji są cztery zajęcia: **🃏 Słówka** (obrazek + lektor; stuknięcie odwraca kartę i czyta po polsku),
-   **🎯 Zgadnij obrazek**, **🧩 Zadania** (gwiazdka za trafienie za pierwszym razem; stuknij polecenie, by je usłyszeć)
-   i **📖 Gramatyka** (stuknij zdanie angielskie lub polskie, by je usłyszeć).
-4. W **⚙️** rodzic ustawia klucz Claude, **styl obrazków**, lektora, przesyłanie lekcji i synchronizację.
+### Nowa kartka (z aplikacją Claude)
+
+1. W Fiszkach stuknij **Nowa kartka 📸** → **Kopiuj polecenie dla Claude** (polecenie zawiera też wybrany styl obrazków).
+2. Stuknij **Otwórz Claude**. W nowej rozmowie **wklej** polecenie, dołącz **zdjęcie kartki** (📎 → Aparat lub
+   Zdjęcia) i wyślij. Claude przygotuje lekcję: słówka z rysunkami, zadania i gramatykę (to trwa 1–3 minuty).
+3. Gdy Claude skończy, stuknij **Kopiuj** przy bloku kodu w jego odpowiedzi.
+   *Jeśli Claude zamiast bloku kodu dał **plik** (np. `lekcja.json`): stuknij go → udostępnij → **Zachowaj w Plikach**.*
+4. Wróć do Fiszek i stuknij **Wklej lekcję od Claude** (iPhone zapyta „Zezwolić na wklejenie?” → **Zezwól**)
+   albo **Wybierz plik od Claude**. Lekcja z obrazkami otworzy się sama.
+
+> Jeśli Fiszki napiszą, że nie mogą odczytać odpowiedzi – napisz Claude: „Popraw JSON, żeby był poprawny” i skopiuj ponownie.
+> Przy bardzo długiej kartce poproś: „Podaj odpowiedź jako plik lekcja.json”.
+
+### Dorysowanie obrazków (starsze lekcje, inny styl)
+
+W lekcji stuknij **⋯ → Dorysuj obrazki w aplikacji Claude** i zrób to samo: **Kopiuj polecenie (obrazki)** →
+**Otwórz Claude** → wklej i wyślij (bez zdjęcia) → **Kopiuj** → **Wklej obrazki od Claude**.
+
+### Zajęcia w lekcji
+
+- **🃏 Słówka** – obrazek + lektor; stuknięcie odwraca kartę i czyta po polsku,
+- **🎯 Zgadnij obrazek** – quiz z rysunkami,
+- **🧩 Zadania** – gwiazdka za trafienie za pierwszym razem; stuknij polecenie, by je usłyszeć,
+- **📖 Gramatyka** – stuknij zdanie angielskie lub polskie, by je usłyszeć.
+
+W **⚙️** rodzic ustawia **styl obrazków**, lektora, przesyłanie lekcji i synchronizację.
+Bez aplikacji Claude można też zeskanować kartkę na dole ekranu „Nowa kartka” – wtedy powstaną tylko słówka (z emoji).
 
 ### Styl obrazków i maskotka Nocka
 
@@ -258,7 +275,8 @@ Nocka wita dziecko na ekranie głównym i chwali za dobre odpowiedzi w quizie.
 | ⚙️: „Brak dostępu do folderu synchronizacji” | **⚙️ → Zmień folder** i wybierz `Fiszki-Sync` ponownie. |
 | Lektor brzmi „jak robot” | Pobierz głosy Premium/Rozszerzone (krok 6) i wybierz je w **⚙️ → Lektor**. |
 | Nie słychać lektora | Zwiększ głośność przyciskami z boku; sprawdź, czy nie gra inna aplikacja. |
-| Obrazek nie pasuje albo się nie narysował | W lekcji **⋯ → Narysuj obrazki (Claude)** dorysowuje brakujące; bez klucza Claude zostają emoji. |
-| Klub: „Klucz API Claude jest nieprawidłowy” | Wklej klucz ponownie w ⚙️ (cały, bez spacji); sprawdź kredyt na platform.claude.com. |
-| Klub: „Claude jest teraz bardzo zajęty” / „Za dużo zapytań” | Odczekaj minutę i spróbuj ponownie. |
+| Obrazek nie pasuje albo się nie narysował | W lekcji **⋯ → Dorysuj obrazki w aplikacji Claude**; do tego czasu zostaje emoji. |
+| „W skopiowanym tekście nie ma lekcji od Claude” | W Claude stuknij **Kopiuj** przy bloku kodu (nie zaznaczaj tekstu ręcznie) i wklej ponownie. |
+| „Nie udało się odczytać odpowiedzi Claude” | Napisz Claude: „Popraw JSON, żeby był poprawny” albo „Podaj odpowiedź jako plik lekcja.json”. |
+| Claude przerwał odpowiedź w połowie | Napisz „kontynuuj”, a potem poproś o całość jako plik lekcja.json. |
 | Klub: „Nie znaleziono słówek ani zadań” | Zrób zdjęcie bliżej, w lepszym świetle, całą kartkę w kadrze. |

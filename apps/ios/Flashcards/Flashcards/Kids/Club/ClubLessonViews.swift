@@ -16,6 +16,7 @@ struct ClubLessonView: View {
     @Environment(ClubLessonStore.self) private var lessonStore: ClubLessonStore
     @Environment(\.dismiss) private var dismiss
     @State private var isDeleteConfirmationPresented: Bool = false
+    @State private var isClaudeIllustratePresented: Bool = false
 
     var body: some View {
         ZStack {
@@ -67,10 +68,15 @@ struct ClubLessonView: View {
                 Menu {
                     if let lesson = self.lessonStore.lesson(id: self.lessonId) {
                         if lesson.illustrationCount(style: ClubStyleSettings.shared.style) < lesson.words.count {
-                            Button("Narysuj obrazki: \(ClubStyleSettings.shared.style.title)", systemImage: "paintbrush.pointed") {
-                                self.lessonStore.illustrate(lessonId: lesson.id)
+                            Button("Dorysuj obrazki w aplikacji Claude", systemImage: "paintbrush.pointed") {
+                                self.isClaudeIllustratePresented = true
                             }
-                            .disabled(self.lessonStore.isIllustrating(lessonId: lesson.id))
+                            if ClubAPIKeyStore.load() != nil {
+                                Button("Narysuj obrazki (klucz API)", systemImage: "bolt.fill") {
+                                    self.lessonStore.illustrate(lessonId: lesson.id)
+                                }
+                                .disabled(self.lessonStore.isIllustrating(lessonId: lesson.id))
+                            }
                         }
                         ShareLink(
                             item: ClubLessonShareItem(lessons: [lesson], fileName: lesson.title),
@@ -86,6 +92,10 @@ struct ClubLessonView: View {
                     Image(systemName: "ellipsis.circle")
                 }
             }
+        }
+        .sheet(isPresented: self.$isClaudeIllustratePresented) {
+            ClubClaudeIllustrateSheet(lessonId: self.lessonId)
+                .environment(self.lessonStore)
         }
         .confirmationDialog("Usunąć tę lekcję?", isPresented: self.$isDeleteConfirmationPresented, titleVisibility: .visible) {
             Button("Usuń", role: .destructive) {

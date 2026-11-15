@@ -76,10 +76,12 @@ struct ClubParentSettingsView: View {
                     }
                     .disabled(self.apiKeyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
                 } header: {
-                    Text("Klucz API Claude")
+                    Text("Opcjonalnie: klucz API Claude")
                 } footer: {
                     Text("""
-                    Klucz utworzysz na platform.claude.com (Settings → API Keys). Jest przechowywany w pęku kluczy \
+                    NIE jest potrzebny, jeśli korzystasz z aplikacji Claude (abonament Pro) – wtedy lekcje i obrazki \
+                    przygotowujesz przyciskami „Kopiuj polecenie” i „Wklej od Claude”. Klucz API (płatny osobno, \
+                    platform.claude.com) pozwala robić to automatycznie. Jest przechowywany w pęku kluczy \
                     iPhone'a i wysyłany tylko do api.anthropic.com razem ze zdjęciem kartki. Jedna kartka \
                     kosztuje zwykle kilka–kilkanaście groszy. Bez klucza aplikacja odczyta tylko słówka (bez zadań).
                     """)
