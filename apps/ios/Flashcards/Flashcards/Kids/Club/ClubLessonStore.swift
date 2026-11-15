@@ -18,6 +18,8 @@ final class ClubLessonStore {
     private(set) var lastSyncDate: Date?
     private(set) var isSyncing: Bool = false
     private(set) var syncFolderName: String?
+    /// Komunikat po wczytaniu pliku `.fiszki` (pokazywany w klubie).
+    var importMessage: String?
 
     private let fileURL: URL
     private var deletedIds: Set<UUID>
@@ -90,6 +92,52 @@ final class ClubLessonStore {
             return
         }
         self.add(draft.makeLesson(id: clubDemoLessonId, now: Date()))
+    }
+
+    // MARK: - Plik .fiszki (AirDrop)
+
+    /// Wczytuje lekcje z pliku `.fiszki`. Nowe lekcje są dodawane, a przy istniejących zostaje lepszy wynik.
+    @discardableResult
+    func importLessons(from url: URL) -> Int {
+        do {
+            let package = try readClubLessonPackage(url: url)
+            var added = 0
+            var changed = false
+            for incoming in package.lessons {
+                if let index = self.lessons.firstIndex(where: { $0.id == incoming.id }) {
+                    if incoming.bestStars > self.lessons[index].bestStars {
+                        self.lessons[index].bestStars = incoming.bestStars
+                        changed = true
+                    }
+                } else {
+                    // Świadomie wczytana lekcja wraca, nawet jeśli kiedyś została tu usunięta.
+                    self.deletedIds.remove(incoming.id)
+                    self.lessons.append(incoming)
+                    added += 1
+                    changed = true
+                }
+            }
+            if changed {
+                UserDefaults.standard.set(self.deletedIds.map(\.uuidString), forKey: Self.deletedKey)
+                self.lessons.sort { $0.createdAt > $1.createdAt }
+                self.save()
+                self.sync()
+            }
+            let total = package.lessons.count
+            if added > 0 {
+                self.importMessage = added == 1
+                    ? "Dodano nową lekcję! 🎉"
+                    : "Dodano nowe lekcje: \(added) 🎉"
+            } else if total > 0 {
+                self.importMessage = "Te lekcje już tu są – zaktualizowano wyniki ⭐"
+            } else {
+                self.importMessage = "Plik nie zawiera lekcji."
+            }
+            return added
+        } catch {
+            self.importMessage = error.localizedDescription
+            return 0
+        }
     }
 
     // MARK: - Folder synchronizacji

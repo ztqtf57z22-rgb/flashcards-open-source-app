@@ -60,6 +60,14 @@ struct ClubLessonView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    if let lesson = self.lessonStore.lesson(id: self.lessonId) {
+                        ShareLink(
+                            item: ClubLessonShareItem(lessons: [lesson], fileName: lesson.title),
+                            preview: SharePreview(lesson.title)
+                        ) {
+                            Label("Wyślij na inne urządzenie (AirDrop)", systemImage: "square.and.arrow.up")
+                        }
+                    }
                     Button("Usuń lekcję", systemImage: "trash", role: .destructive) {
                         self.isDeleteConfirmationPresented = true
                     }

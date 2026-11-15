@@ -250,6 +250,12 @@ struct FlashcardsApp: App {
                 .accentColor(self.isKidModeEnabled ? KidPalette.orange : store.displayedAccountAccentColor.color)
                 .preferredColorScheme(self.isKidModeEnabled || self.appMode.mode != .standard ? .light : store.effectiveAccountTheme.colorScheme)
                 .onOpenURL { url in
+                    // Plik lekcji z AirDrop / aplikacji Pliki: wczytaj i otwórz klub.
+                    if url.isFileURL, url.pathExtension.lowercased() == "fiszki" {
+                        ClubLessonStore.shared.importLessons(from: url)
+                        self.appMode.mode = .club
+                        return
+                    }
                     if let widgetDeepLink = parseWidgetDeepLinkURL(url: url) {
                         self.pendingWidgetDeepLink = widgetDeepLink
                         return

@@ -142,7 +142,28 @@ przy włączonym LocalDevVPN). Lekcje i ustawienia zostają.
 
 ---
 
-## Krok 4. Synchronizacja iPhone ↔ iPad
+## Krok 4. Lekcje na iPhonie i iPadzie – wybierz sposób
+
+Możesz przenosić lekcje **ręcznie przez AirDrop** (prosto, bez iCloud) **albo** włączyć **automatyczną
+synchronizację** przez folder w iCloud Drive. Wystarczy jeden sposób; można też używać obu.
+
+### Sposób 1: AirDrop – bez synchronizacji (najprostszy)
+
+1. Na **iPhonie** zrób zdjęcie kartki – powstanie lekcja.
+2. W lekcji stuknij **⋯** (prawy górny róg) → **Wyślij na inne urządzenie (AirDrop)** → wybierz swojego **iPada**.
+   (Na iPadzie AirDrop musi być włączony: *Centrum sterowania* → przytrzymaj kafelek Wi-Fi → **AirDrop** →
+   *Tylko kontakty* lub *Wszyscy przez 10 minut*.)
+3. Na **iPadzie** wybierz **Fiszki** (jeśli iPad zapyta, czym otworzyć plik). Aplikacja sama otworzy klub
+   i pokaże „Dodano nową lekcję! 🎉”.
+4. Gwiazdki zdobyte na iPadzie zostają na iPadzie. Jeśli chcesz je mieć też na iPhonie, wyślij lekcję tak samo
+   z iPada na iPhone – lekcja się nie zdubluje, a lepszy wynik zostanie zachowany.
+
+W **⚙️** klubu (dla rodzica) są też przyciski **Wyślij wszystkie lekcje (AirDrop)** i **Wczytaj lekcje z pliku**
+(np. gdy plik `.fiszki` przyszedł mailem albo leży w aplikacji Pliki). Plik możesz też wysłać przez Wiadomości.
+
+> AirDrop działa przez Bluetooth i Wi-Fi bezpośrednio między urządzeniami – bez internetu i bez iCloud.
+
+### Sposób 2: automatyczna synchronizacja przez iCloud Drive (opcjonalnie)
 
 | Co | Jak się synchronizuje |
 |---|---|
@@ -150,7 +171,7 @@ przy włączonym LocalDevVPN). Lekcje i ustawienia zostają.
 | **Zwykłe fiszki i powtórki** | Bezpłatne konto Nibomo – na obu urządzeniach zaloguj się **tym samym e-mailem** |
 | **Klucz Claude** | Wpisz go na każdym urządzeniu (raz) – patrz krok 5 |
 
-### Klub (raz na każdym urządzeniu)
+#### Ustawienie folderu (raz na każdym urządzeniu)
 
 1. Upewnij się, że iPhone i iPad są zalogowane na **to samo Apple ID** i mają włączony **iCloud Drive**
    (*Ustawienia → [Twoje imię] → iCloud → iCloud Drive*).
@@ -164,13 +185,16 @@ Od teraz kartka zeskanowana na iPhonie pojawi się na iPadzie i odwrotnie. To sa
 (zawsze zostaje lepszy wynik) i usuniętych lekcji. Gdy klub jest otwarty, aplikacja sprawdza zmiany co ok. 30 sekund.
 Można też stuknąć **⚙️ → Synchronizuj teraz**. iCloud zwykle przesyła zmiany w kilka sekund, czasem w kilka minut.
 
-### Zwykłe fiszki
+#### Zwykłe fiszki (standardowa aplikacja)
 
 W kafelku **🗂️ Fiszki** → *Ustawienia → Konto* zaloguj się **e-mailem** (dostaniesz kod), tym samym adresem na obu
 urządzeniach. Logowanie przez Apple/Google w tej wersji najpewniej nie zadziała, więc używaj e-maila.
 W *Ustawieniach* znajdziesz też **🧸 Tryb dla dziecka** i **🏠 Ekran wyboru**.
 
-## Krok 5. Klucz Claude (raz na każdym urządzeniu)
+## Krok 5. Klucz Claude
+
+> Jeśli zdjęcia kartek robisz tylko na iPhonie i przesyłasz lekcje przez AirDrop, klucz wpisz **tylko na iPhonie** –
+> iPad dostaje gotowe lekcje i klucza nie potrzebuje.
 
 1. Na komputerze wejdź na **platform.claude.com**, załóż konto i w **Billing** dodaj np. 5 USD kredytu.
 2. **Settings → API Keys → Create Key** – skopiuj klucz (zaczyna się od `sk-ant-`) i zapisz go np. w Notatkach.
@@ -203,7 +227,8 @@ W *Ustawieniach* znajdziesz też **🧸 Tryb dla dziecka** i **🏠 Ekran wyboru
 | AltServer nie widzi urządzenia | Zainstaluj iTunes/iCloud ze strony apple.com (nie z Microsoft Store), podłącz kablem, stuknij „Zaufaj”. |
 | „Maximum number of apps” | Darmowe Apple ID pozwala na 3 takie aplikacje na urządzeniu (AltStore/SideStore też się liczy) – usuń inne. |
 | Aplikacja nie otwiera się po tygodniu | AltStore: uruchom AltServer na komputerze w tej samej sieci Wi-Fi i w AltStore stuknij **Refresh All**. SideStore: **LocalDevVPN → Connect**, potem w SideStore stuknij licznik dni. |
-| Lekcja nie pojawia się na drugim urządzeniu | Ten sam folder wybrany na obu? To samo Apple ID i iCloud Drive włączony? **⚙️ → Synchronizuj teraz**. |
+| Po AirDrop iPad nie proponuje „Fiszki” | Stuknij **Więcej…/Otwórz za pomocą** i wybierz Fiszki, albo zapisz plik w aplikacji Pliki i w klubie użyj **⚙️ → Wczytaj lekcje z pliku**. |
+| Lekcja nie pojawia się na drugim urządzeniu (synchronizacja) | Ten sam folder wybrany na obu? To samo Apple ID i iCloud Drive włączony? **⚙️ → Synchronizuj teraz**. |
 | ⚙️: „Brak dostępu do folderu synchronizacji” | **⚙️ → Zmień folder** i wybierz `Fiszki-Sync` ponownie. |
 | Fiszki nie synchronizują się | Na obu urządzeniach zaloguj się tym samym e-mailem w *Ustawienia → Konto*. |
 | Klub: „Klucz API Claude jest nieprawidłowy” | Wklej klucz ponownie w ⚙️ (cały, bez spacji); sprawdź kredyt na platform.claude.com. |

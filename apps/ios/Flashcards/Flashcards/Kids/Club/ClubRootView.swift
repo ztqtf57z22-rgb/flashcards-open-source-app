@@ -93,6 +93,17 @@ struct ClubRootView: View {
             }
             .presentationDetents([.medium])
         }
+        .alert(
+            "Lekcje z pliku",
+            isPresented: Binding(
+                get: { self.lessonStore.importMessage != nil },
+                set: { if $0 == false { self.lessonStore.importMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) { self.lessonStore.importMessage = nil }
+        } message: {
+            Text(self.lessonStore.importMessage ?? "")
+        }
         .sheet(isPresented: self.$isParentSettingsPresented) {
             ClubParentSettingsView()
                 .environment(self.lessonStore)

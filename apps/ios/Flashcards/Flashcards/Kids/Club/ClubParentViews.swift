@@ -53,6 +53,7 @@ struct ClubParentSettingsView: View {
     @State private var exportingLessonId: UUID?
     @State private var message: String?
     @State private var isFolderPickerPresented: Bool = false
+    @State private var isLessonFileImporterPresented: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -86,6 +87,31 @@ struct ClubParentSettingsView: View {
                 }
 
                 Section {
+                    if self.lessonStore.lessons.isEmpty == false {
+                        ShareLink(
+                            item: ClubLessonShareItem(lessons: self.lessonStore.lessons, fileName: "Wszystkie lekcje"),
+                            preview: SharePreview("Wszystkie lekcje (\(self.lessonStore.lessons.count))")
+                        ) {
+                            Label("Wyślij wszystkie lekcje (AirDrop)", systemImage: "square.and.arrow.up.on.square")
+                        }
+                    }
+                    Button("Wczytaj lekcje z pliku", systemImage: "square.and.arrow.down") {
+                        self.isLessonFileImporterPresented = true
+                    }
+                    if let message = self.lessonStore.importMessage {
+                        Text(message)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Przenoszenie lekcji bez synchronizacji")
+                } footer: {
+                    Text("""
+                    Pojedynczą lekcję wyślesz z menu ⋯ w lekcji. Na drugim urządzeniu odbierz AirDrop i wybierz \
+                    „Otwórz w Fiszki” – lekcja doda się sama. Wysłanie lekcji z powrotem przenosi też gwiazdki.
+                    """)
+                }
+
+                Section {
                     if let folderName = self.lessonStore.syncFolderName {
                         LabeledContent("Folder", value: folderName)
                         if let lastSync = self.lessonStore.lastSyncDate {
@@ -113,7 +139,7 @@ struct ClubParentSettingsView: View {
                             .foregroundStyle(.red)
                     }
                 } header: {
-                    Text("Synchronizacja iPhone ↔ iPad")
+                    Text("Automatyczna synchronizacja (opcjonalnie)")
                 } footer: {
                     Text("""
                     W aplikacji Pliki utwórz w iCloud Drive folder, np. „Fiszki-Sync”, i wybierz go tutaj \
@@ -166,6 +192,17 @@ struct ClubParentSettingsView: View {
                     self.lessonStore.setSyncFolder(url: url)
                 case .failure(let error):
                     self.lessonStore.lastError = error.localizedDescription
+                }
+            }
+            .fileImporter(
+                isPresented: self.$isLessonFileImporterPresented,
+                allowedContentTypes: [.clubLessonFile, .json, .data]
+            ) { result in
+                switch result {
+                case .success(let url):
+                    self.lessonStore.importLessons(from: url)
+                case .failure(let error):
+                    self.lessonStore.importMessage = error.localizedDescription
                 }
             }
             .navigationTitle("Dla rodzica")
