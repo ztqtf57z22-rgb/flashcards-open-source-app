@@ -39,7 +39,6 @@ enum ClubRoute: Hashable {
 
 /// Strona główna Play & Learn Club.
 struct ClubRootView: View {
-    @Environment(AppModeModel.self) private var appMode: AppModeModel
     @State private var lessonStore = ClubLessonStore.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var speaker = ClubSpeaker()
@@ -82,6 +81,10 @@ struct ClubRootView: View {
                 if let lesson {
                     self.lessonStore.add(lesson)
                     self.path = [.lesson(lesson.id)]
+                    // Od razu prosimy Claude o rysunki do słówek (w tle; postęp widać w lekcji).
+                    if ClubAPIKeyStore.load() != nil {
+                        self.lessonStore.illustrate(lessonId: lesson.id)
+                    }
                 }
             }
             .environment(self.lessonStore)
@@ -107,6 +110,7 @@ struct ClubRootView: View {
         .sheet(isPresented: self.$isParentSettingsPresented) {
             ClubParentSettingsView()
                 .environment(self.lessonStore)
+                .environment(self.speaker)
         }
     }
 
@@ -169,13 +173,6 @@ struct ClubRootView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    self.appMode.mode = .chooser
-                } label: {
-                    Label("Ekran wyboru", systemImage: "house.fill")
-                }
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     self.isParentGatePresented = true
@@ -193,14 +190,21 @@ struct ClubLessonTile: View {
     var body: some View {
         let color = KidPalette.color(seed: self.lesson.title)
         VStack(spacing: 8) {
-            Text(self.lesson.themeEmoji)
-                .font(.system(size: 52))
+            if let first = self.lesson.words.first {
+                ClubWordPicture(word: first, size: 72)
+            } else {
+                Text(self.lesson.themeEmoji)
+                    .font(.system(size: 52))
+            }
             Text(self.lesson.title)
                 .font(.system(.headline, design: .rounded).weight(.bold))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-            Text(self.lesson.words.prefix(4).map(\.emoji).joined(separator: " "))
-                .font(.title3)
+            HStack(spacing: 4) {
+                ForEach(self.lesson.words.dropFirst().prefix(3)) { word in
+                    ClubWordPicture(word: word, size: 30)
+                }
+            }
             HStack(spacing: 2) {
                 ForEach(0..<3, id: \.self) { index in
                     Image(systemName: index < clubTrophyLevel(stars: self.lesson.bestStars, total: self.lesson.exercises.count) ? "star.fill" : "star")

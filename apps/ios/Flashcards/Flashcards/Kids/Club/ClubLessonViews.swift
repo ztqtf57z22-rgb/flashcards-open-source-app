@@ -23,11 +23,16 @@ struct ClubLessonView: View {
             if let lesson = self.lessonStore.lesson(id: self.lessonId) {
                 ScrollView {
                     VStack(spacing: 18) {
-                        Text(lesson.themeEmoji)
-                            .font(.system(size: 80))
-                        Text(lesson.title)
-                            .font(.system(.largeTitle, design: .rounded).weight(.heavy))
-                            .multilineTextAlignment(.center)
+                        self.header(lesson: lesson)
+
+                        if let progress = self.lessonStore.illustrationProgress[lesson.id] {
+                            self.illustrationProgressView(done: progress.done, total: progress.total)
+                        } else if let error = self.lessonStore.illustrationError {
+                            Text(error)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
 
                         self.activityButton(
                             emoji: "🃏", title: "Słówka", subtitle: "\(lesson.words.count) obrazków do poznania",
@@ -61,6 +66,12 @@ struct ClubLessonView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     if let lesson = self.lessonStore.lesson(id: self.lessonId) {
+                        if lesson.illustrationCount < lesson.words.count {
+                            Button("Narysuj obrazki (Claude)", systemImage: "paintbrush.pointed") {
+                                self.lessonStore.illustrate(lessonId: lesson.id)
+                            }
+                            .disabled(self.lessonStore.isIllustrating(lessonId: lesson.id))
+                        }
                         ShareLink(
                             item: ClubLessonShareItem(lessons: [lesson], fileName: lesson.title),
                             preview: SharePreview(lesson.title)
@@ -82,6 +93,30 @@ struct ClubLessonView: View {
                 self.dismiss()
             }
         }
+    }
+
+    private func header(lesson: ClubLesson) -> some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                ForEach(lesson.words.prefix(4)) { word in
+                    ClubWordPicture(word: word, size: 62)
+                }
+            }
+            Text(lesson.title)
+                .font(.system(.largeTitle, design: .rounded).weight(.heavy))
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private func illustrationProgressView(done: Int, total: Int) -> some View {
+        VStack(spacing: 8) {
+            Text("Claude rysuje obrazki… 🎨 \(done)/\(total)")
+                .font(.system(.headline, design: .rounded))
+            ProgressView(value: Double(done), total: Double(max(total, 1)))
+                .tint(KidPalette.orange)
+        }
+        .padding()
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private func activityButton(emoji: String, title: String, subtitle: String, color: Color, route: ClubRoute, isEnabled: Bool) -> some View {
@@ -139,18 +174,20 @@ struct ClubWordsView: View {
 
                     Button {
                         withAnimation(.spring(duration: 0.4)) { self.isFlipped.toggle() }
-                        if self.isFlipped == false {
-                            self.speaker.speakEnglish(word.english)
-                        }
+                        self.speakCurrentSide(word: word)
                     } label: {
                         self.card(word: word)
                     }
                     .buttonStyle(.plain)
 
                     Button {
-                        self.speaker.speakEnglish(word.english)
+                        self.speakCurrentSide(word: word)
                     } label: {
-                        ClubBigButtonLabel(title: "Posłuchaj", systemImage: "speaker.wave.2.fill", color: KidPalette.sky)
+                        ClubBigButtonLabel(
+                            title: self.isFlipped ? "Posłuchaj po polsku" : "Posłuchaj po angielsku",
+                            systemImage: "speaker.wave.2.fill",
+                            color: KidPalette.sky
+                        )
                     }
                     .buttonStyle(.plain)
 
@@ -183,15 +220,17 @@ struct ClubWordsView: View {
         }
         .navigationTitle("Słówka")
         .navigationBarTitleDisplayMode(.inline)
+        .onDisappear {
+            self.speaker.stop()
+        }
     }
 
     private func card(word: ClubWord) -> some View {
         let color = KidPalette.color(seed: word.english)
         return VStack(spacing: 16) {
-            Text(word.emoji)
-                .font(.system(size: 120))
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
+            ClubWordPicture(word: word, size: 190)
+                .padding(10)
+                .background(.white, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
             Text(self.isFlipped ? word.polish : word.english)
                 .font(.system(size: 40, weight: .heavy, design: .rounded))
                 .multilineTextAlignment(.center)
@@ -201,7 +240,7 @@ struct ClubWordsView: View {
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 340)
+        .frame(maxWidth: .infinity, minHeight: 360)
         .padding()
         .background(
             (self.isFlipped ? KidPalette.backGradient : KidPalette.frontGradient),
@@ -212,6 +251,14 @@ struct ClubWordsView: View {
                 .stroke(color, lineWidth: 5)
         )
         .rotation3DEffect(.degrees(self.isFlipped ? 360 : 0), axis: (x: 0, y: 1, z: 0))
+    }
+
+    private func speakCurrentSide(word: ClubWord) {
+        if self.isFlipped {
+            self.speaker.speakPolish(word.polish)
+        } else {
+            self.speaker.speakEnglish(word.english)
+        }
     }
 
     private func move(by offset: Int, count: Int) {
@@ -249,6 +296,10 @@ struct ClubQuizView: View {
 
     private let praise = ["Super! 🎉", "Brawo! ⭐", "Świetnie! 🦁", "Ekstra! 🚀", "Tak trzymaj! 🌈", "Mistrz! 🏆"]
 
+    private var words: [ClubWord] {
+        self.lessonStore.lesson(id: self.lessonId)?.words ?? []
+    }
+
     var body: some View {
         ZStack {
             ClubBackground()
@@ -272,10 +323,14 @@ struct ClubQuizView: View {
                 self.speakQuestion(first)
             }
         }
+        .onDisappear {
+            self.speaker.stop()
+        }
     }
 
     private func exerciseScreen(exercise: ClubExercise) -> some View {
         let isAnsweredCorrectly = self.chosen == exercise.answer
+        let hasPictureOptions = exercise.options.contains { clubWordId(token: $0) != nil }
         return ScrollView {
             VStack(spacing: 18) {
                 ProgressView(value: Double(self.index), total: Double(max(self.exercises.count, 1)))
@@ -289,20 +344,21 @@ struct ClubQuizView: View {
                 }
                 .font(.system(.headline, design: .rounded))
 
-                Text(exercise.instructionPolish)
-                    .font(.system(.title3, design: .rounded).weight(.bold))
-                    .multilineTextAlignment(.center)
-
-                if exercise.emoji.isEmpty == false {
-                    Text(exercise.emoji)
-                        .font(.system(size: 90))
-                        .minimumScaleFactor(0.4)
-                        .lineLimit(1)
+                Button {
+                    self.speaker.speakPolish(exercise.instructionPolish)
+                } label: {
+                    Label(exercise.instructionPolish, systemImage: "speaker.wave.1.fill")
+                        .font(.system(.title3, design: .rounded).weight(.bold))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Color(red: 0.2, green: 0.2, blue: 0.3))
                 }
+                .buttonStyle(.plain)
+
+                self.exercisePicture(exercise: exercise)
 
                 if exercise.question.isEmpty == false {
                     Button {
-                        self.speaker.speakEnglish(exercise.question)
+                        self.speakQuestion(exercise)
                     } label: {
                         HStack {
                             Text(exercise.question)
@@ -319,24 +375,16 @@ struct ClubQuizView: View {
                     .buttonStyle(.plain)
                 }
 
-                ForEach(exercise.options, id: \.self) { option in
-                    Button {
-                        self.choose(option: option, exercise: exercise)
-                    } label: {
-                        Text(option)
-                            .font(.system(size: clubIsEmojiOnly(option) ? 44 : 24, weight: .bold, design: .rounded))
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity, minHeight: 66)
-                            .padding(.horizontal)
-                            .background(
-                                self.optionColor(option: option, exercise: exercise).gradient,
-                                in: RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            )
-                            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                if hasPictureOptions {
+                    HStack(spacing: 12) {
+                        ForEach(exercise.options, id: \.self) { option in
+                            self.optionButton(option: option, exercise: exercise, isAnsweredCorrectly: isAnsweredCorrectly)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .disabled(isAnsweredCorrectly || self.wrongChoices.contains(option))
+                } else {
+                    ForEach(exercise.options, id: \.self) { option in
+                        self.optionButton(option: option, exercise: exercise, isAnsweredCorrectly: isAnsweredCorrectly)
+                    }
                 }
 
                 if isAnsweredCorrectly {
@@ -367,6 +415,50 @@ struct ClubQuizView: View {
             .frame(maxWidth: 600)
             .frame(maxWidth: .infinity)
         }
+    }
+
+    /// Obrazek nad pytaniem: rysunek słówka (gdy zadanie go wskazuje) albo emoji od Claude.
+    @ViewBuilder
+    private func exercisePicture(exercise: ClubExercise) -> some View {
+        if let wordId = clubWordId(token: exercise.emoji), let word = self.words.first(where: { $0.id == wordId }) {
+            ClubWordPicture(word: word, size: 150)
+                .padding(8)
+                .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        } else if exercise.emoji.isEmpty == false, clubWordId(token: exercise.emoji) == nil {
+            Text(exercise.emoji)
+                .font(.system(size: 90))
+                .minimumScaleFactor(0.4)
+                .lineLimit(1)
+        }
+    }
+
+    private func optionButton(option: String, exercise: ClubExercise, isAnsweredCorrectly: Bool) -> some View {
+        Button {
+            self.choose(option: option, exercise: exercise)
+        } label: {
+            Group {
+                if let wordId = clubWordId(token: option), let word = self.words.first(where: { $0.id == wordId }) {
+                    ClubWordPicture(word: word, size: 86)
+                        .padding(8)
+                        .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .padding(6)
+                } else {
+                    Text(option)
+                        .font(.system(size: clubIsEmojiOnly(option) ? 44 : 24, weight: .bold, design: .rounded))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 66)
+            .background(
+                self.optionColor(option: option, exercise: exercise).gradient,
+                in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(isAnsweredCorrectly || self.wrongChoices.contains(option))
     }
 
     private var finishScreen: some View {
@@ -423,8 +515,10 @@ struct ClubQuizView: View {
             }
             withAnimation(.spring(duration: 0.35)) { self.chosen = option }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            if clubIsEmojiOnly(option) == false {
-                self.speaker.speakEnglish(option)
+            if let wordId = clubWordId(token: option), let word = self.words.first(where: { $0.id == wordId }) {
+                self.speaker.speakEnglish(word.english)
+            } else if clubIsEmojiOnly(option) == false {
+                self.speaker.speakDetectingLanguage(option)
             }
         } else {
             withAnimation { _ = self.wrongChoices.insert(option) }
@@ -464,7 +558,9 @@ struct ClubQuizView: View {
 
     private func speakQuestion(_ exercise: ClubExercise) {
         if exercise.question.isEmpty == false {
-            self.speaker.speakEnglish(exercise.question)
+            self.speaker.speakDetectingLanguage(exercise.question)
+        } else {
+            self.speaker.speakPolish(exercise.instructionPolish)
         }
     }
 }
@@ -495,31 +591,21 @@ struct ClubGrammarView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text(note.title)
                                 .font(.system(.title2, design: .rounded).weight(.heavy))
-                            Text(note.explanationPolish)
-                                .font(.system(.body, design: .rounded))
-                            ForEach(note.examples) { example in
-                                Button {
-                                    self.speaker.speakEnglish(example.english)
-                                } label: {
-                                    HStack(alignment: .top, spacing: 12) {
-                                        Text(example.emoji)
-                                            .font(.system(size: 34))
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(example.english)
-                                                .font(.system(.title3, design: .rounded).weight(.bold))
-                                            Text(example.polish)
-                                                .font(.system(.subheadline, design: .rounded))
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Spacer()
-                                        Image(systemName: "speaker.wave.2.fill")
-                                            .foregroundStyle(KidPalette.sky)
-                                    }
-                                    .padding(12)
-                                    .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                                    .contentShape(Rectangle())
+                            Button {
+                                self.speaker.speakPolish(note.explanationPolish)
+                            } label: {
+                                HStack(alignment: .top) {
+                                    Text(note.explanationPolish)
+                                        .font(.system(.body, design: .rounded))
+                                        .multilineTextAlignment(.leading)
+                                    Spacer(minLength: 4)
+                                    Image(systemName: "speaker.wave.1.fill")
+                                        .foregroundStyle(KidPalette.purple)
                                 }
-                                .buttonStyle(.plain)
+                            }
+                            .buttonStyle(.plain)
+                            ForEach(note.examples) { example in
+                                self.exampleRow(example: example)
                             }
                         }
                         .foregroundStyle(Color(red: 0.2, green: 0.2, blue: 0.3))
@@ -535,5 +621,51 @@ struct ClubGrammarView: View {
         }
         .navigationTitle("Gramatyka")
         .navigationBarTitleDisplayMode(.inline)
+        .onDisappear {
+            self.speaker.stop()
+        }
+    }
+
+    private func exampleRow(example: ClubExample) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(example.emoji)
+                .font(.system(size: 34))
+            VStack(alignment: .leading, spacing: 6) {
+                Button {
+                    self.speaker.speakEnglish(example.english)
+                } label: {
+                    Label(example.english, systemImage: "speaker.wave.2.fill")
+                        .font(.system(.title3, design: .rounded).weight(.bold))
+                        .labelStyle(ClubTrailingIconLabelStyle(color: KidPalette.sky))
+                }
+                .buttonStyle(.plain)
+                Button {
+                    self.speaker.speakPolish(example.polish)
+                } label: {
+                    Label(example.polish, systemImage: "speaker.wave.1.fill")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .labelStyle(ClubTrailingIconLabelStyle(color: KidPalette.purple))
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+/// Etykieta z ikoną głośnika po prawej stronie tekstu.
+struct ClubTrailingIconLabelStyle: LabelStyle {
+    let color: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 8) {
+            configuration.title
+                .multilineTextAlignment(.leading)
+            configuration.icon
+                .foregroundStyle(self.color)
+        }
     }
 }

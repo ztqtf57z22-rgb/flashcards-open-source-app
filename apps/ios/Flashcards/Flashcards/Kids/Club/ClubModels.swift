@@ -22,6 +22,15 @@ struct ClubWord: Codable, Identifiable, Hashable, Sendable {
     var emoji: String
     /// Nagłówek z kartki, np. „Unit 2 Vocabulary” albo „Experiment Lab”.
     var group: String
+    /// Ilustracja SVG narysowana przez Claude (nil = pokazujemy emoji).
+    var svg: String? = nil
+}
+
+extension ClubLesson {
+    /// Ile słówek ma już ilustrację od Claude.
+    var illustrationCount: Int {
+        self.words.filter { $0.svg != nil }.count
+    }
 }
 
 struct ClubGrammarNote: Codable, Identifiable, Hashable, Sendable {
@@ -144,17 +153,17 @@ func makeClubPictureQuiz(words: [ClubWord], count: Int) -> [ClubExercise] {
                 id: UUID(),
                 instructionPolish: "Który obrazek to:",
                 question: word.english,
-                emoji: "👀",
-                options: ([word.emoji] + others.map(\.emoji)).shuffled(),
-                answer: word.emoji,
-                explanationPolish: "\(word.emoji) \(word.english) = \(word.polish)"
+                emoji: "",
+                options: ([word] + others).map { clubWordToken(word: $0) }.shuffled(),
+                answer: clubWordToken(word: word),
+                explanationPolish: "\(word.english) = \(word.polish)"
             ))
         } else {
             exercises.append(ClubExercise(
                 id: UUID(),
                 instructionPolish: "Co to znaczy po polsku?",
                 question: word.english,
-                emoji: word.emoji,
+                emoji: clubWordToken(word: word),
                 options: ([word.polish] + others.map(\.polish)).shuffled(),
                 answer: word.polish,
                 explanationPolish: "\(word.english) = \(word.polish)"
@@ -163,6 +172,16 @@ func makeClubPictureQuiz(words: [ClubWord], count: Int) -> [ClubExercise] {
     }
     // Dwa słówka mogą mieć ten sam obrazek – wtedy pytanie byłoby niejednoznaczne.
     return exercises.filter { Set($0.options).count == $0.options.count }
+}
+
+/// Odnośnik do słówka w zadaniu: zamiast tekstu pokazujemy jego obrazek.
+func clubWordToken(word: ClubWord) -> String {
+    "word:\(word.id.uuidString)"
+}
+
+func clubWordId(token: String) -> UUID? {
+    guard token.hasPrefix("word:") else { return nil }
+    return UUID(uuidString: String(token.dropFirst(5)))
 }
 
 /// „1 fiszkę”, „3 fiszki”, „5 fiszek” – polska odmiana (biernik).

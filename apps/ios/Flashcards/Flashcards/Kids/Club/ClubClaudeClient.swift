@@ -119,27 +119,126 @@ enum ClubClaudeClient {
         guard imageBlocks.isEmpty == false else {
             throw WorksheetTextRecognitionError.unreadableImage
         }
+        let json = try await self.requestJSON(
+            system: clubSystemPrompt,
+            content: imageBlocks + [
+                ["type": "text", "text": clubUserPrompt(pageCount: imageBlocks.count)],
+            ],
+            schema: clubLessonJSONSchema(),
+            effort: "medium",
+            apiKey: apiKey
+        )
+        guard let draft = try? ClubLessonDraft.decode(json: json) else {
+            throw ClubClaudeError.unreadableResponse
+        }
+        guard draft.vocabulary.isEmpty == false || draft.exercises.isEmpty == false else {
+            throw ClubClaudeError.emptyLesson
+        }
+        return draft
+    }
 
+    /// Słówko do narysowania.
+    struct IllustrationRequest: Sendable {
+        let english: String
+        let polish: String
+    }
+
+    /// Claude rysuje ilustracje SVG do słówek – po kilka na zapytanie, kilka zapytań naraz.
+    /// Zwraca słownik „angielskie słowo → SVG”. Brakujący rysunek nie przerywa całości (zostaje emoji).
+    static func makeIllustrations(
+        words: [IllustrationRequest],
+        apiKey: String,
+        onProgress: @escaping @MainActor @Sendable (Int, Int) -> Void
+    ) async throws -> [String: String] {
+        let batchSize = 4
+        let batches = stride(from: 0, to: words.count, by: batchSize).map {
+            Array(words[$0..<min($0 + batchSize, words.count)])
+        }
+        let total = words.count
+        var drawn: [String: String] = [:]
+        var firstError: Error?
+        await onProgress(0, total)
+
+        await withTaskGroup(of: Result<[String: String], Error>.self) { group in
+            var pending = batches.makeIterator()
+            for _ in 0..<3 {
+                if let batch = pending.next() {
+                    group.addTask { await self.drawBatchResult(words: batch, apiKey: apiKey) }
+                }
+            }
+            for await result in group {
+                switch result {
+                case .success(let batchResult):
+                    drawn.merge(batchResult) { first, _ in first }
+                case .failure(let error):
+                    if firstError == nil { firstError = error }
+                }
+                await onProgress(min(drawn.count, total), total)
+                if let batch = pending.next() {
+                    group.addTask { await self.drawBatchResult(words: batch, apiKey: apiKey) }
+                }
+            }
+        }
+
+        if drawn.isEmpty, let firstError {
+            throw firstError
+        }
+        return drawn
+    }
+
+    private static func drawBatchResult(words: [IllustrationRequest], apiKey: String) async -> Result<[String: String], Error> {
+        do {
+            return .success(try await self.drawBatch(words: words, apiKey: apiKey))
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    private static func drawBatch(words: [IllustrationRequest], apiKey: String) async throws -> [String: String] {
+        let list = words.map { "- \($0.english) (po polsku: \($0.polish))" }.joined(separator: "\n")
+        let json = try await self.requestJSON(
+            system: clubIllustratorPrompt,
+            content: [["type": "text", "text": "Narysuj ilustracje do tych słówek:\n\(list)"]],
+            schema: clubIllustrationsJSONSchema(),
+            effort: "medium",
+            apiKey: apiKey
+        )
+        guard let root = try JSONSerialization.jsonObject(with: json) as? [String: Any],
+              let items = root["illustrations"] as? [[String: Any]] else {
+            throw ClubClaudeError.unreadableResponse
+        }
+        var result: [String: String] = [:]
+        for item in items {
+            guard let english = item["english"] as? String, let svg = item["svg"] as? String,
+                  svg.contains("<svg") else { continue }
+            result[english] = svg
+        }
+        return result
+    }
+
+    /// Jedno zapytanie do Claude z wymuszonym formatem JSON (structured outputs). Zwraca tekst JSON.
+    private static func requestJSON(
+        system: String,
+        content: [[String: Any]],
+        schema: [String: Any],
+        effort: String,
+        apiKey: String
+    ) async throws -> Data {
         let body: [String: Any] = [
             "model": self.model,
             "max_tokens": 16000,
             // Gdyby filtr bezpieczeństwa odrzucił zapytanie, serwer sam spróbuje zalecanym modelem zapasowym.
             "fallbacks": "default",
             "output_config": [
-                "effort": "medium",
+                "effort": effort,
                 "format": [
                     "type": "json_schema",
-                    "schema": clubLessonJSONSchema(),
+                    "schema": schema,
                 ],
             ],
-            "system": clubSystemPrompt,
+            "system": system,
             "messages": [
-                [
-                    "role": "user",
-                    "content": imageBlocks + [
-                        ["type": "text", "text": clubUserPrompt(pageCount: imageBlocks.count)],
-                    ],
-                ],
+                ["role": "user", "content": content],
             ],
         ]
 
@@ -175,13 +274,10 @@ enum ClubClaudeClient {
             .filter { $0["type"] as? String == "text" }
             .compactMap { $0["text"] as? String }
             .joined()
-        guard let json = text.data(using: .utf8), let draft = try? ClubLessonDraft.decode(json: json) else {
+        guard let json = text.data(using: .utf8) else {
             throw ClubClaudeError.unreadableResponse
         }
-        guard draft.vocabulary.isEmpty == false || draft.exercises.isEmpty == false else {
-            throw ClubClaudeError.emptyLesson
-        }
-        return draft
+        return json
     }
 
     private static func httpError(status: Int, data: Data) -> ClubClaudeError {
@@ -282,4 +378,51 @@ private func clubLessonJSONSchema() -> [String: Any] {
         "grammar": ["type": "array", "items": grammar],
         "exercises": ["type": "array", "items": exercise],
     ])
+}
+
+// MARK: - Ilustrator
+
+private let clubIllustratorPrompt = """
+Jesteś ilustratorem podręczników do angielskiego dla 7-letnich dzieci. Do każdego słówka rysujesz jedną \
+ilustrację w formacie SVG, w spójnym stylu: płaska grafika wektorowa jak w dobrym podręczniku dla dzieci, \
+jasne i radosne kolory, wyraźny ciemny kontur.
+
+Wymagania techniczne (aplikacja rysuje tylko taki podzbiór SVG):
+- Element główny: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">. Rysunek wyśrodkowany, \
+ok. 6 jednostek marginesu.
+- Dozwolone elementy: g, rect, circle, ellipse, line, polyline, polygon, path. Nic więcej: bez text, \
+image, use, defs, linearGradient, radialGradient, filter, mask, clipPath, style, pattern.
+- Dozwolone atrybuty: fill, stroke, stroke-width, stroke-linecap, stroke-linejoin, opacity, fill-opacity, \
+fill-rule, transform (tylko translate, rotate, scale), oraz geometria (x, y, width, height, rx, ry, cx, cy, \
+r, x1, y1, x2, y2, points, d).
+- W atrybucie d używaj tylko komend M, L, H, V, C, S, Q, T, Z (wielkie lub małe). Bez łuków A – koła \
+i owale rysuj elementami circle/ellipse.
+- Kolory jako #rrggbb. Kontur: stroke="#2b2b2b", stroke-width od 2 do 3, stroke-linejoin="round", \
+stroke-linecap="round".
+- Najwyżej ok. 40 elementów i 3000 znaków na rysunek.
+
+Treść:
+- Przedmiot narysuj tak, by dziecko od razu go rozpoznało (np. glue stick – sztyft kleju ze zdjętą \
+nakrętką; pencil sharpener – temperówka z wsuniętym ołówkiem; rubber – gumka do ścierania).
+- Przymiotnik, czasownik lub pojęcie pokaż prostą scenką (dark – nocne niebo z księżycem; light – \
+jasne słońce; mix – pędzel mieszający dwie farby w misce; fold – kartka składana na pół; primary \
+colours – trzy kleksy: czerwony, żółty, niebieski).
+- Bez liter, cyfr i napisów na rysunku.
+- Zwróć dokładnie jedną ilustrację na każde słówko, z polem „english” identycznym jak na liście.
+"""
+
+private func clubIllustrationsJSONSchema() -> [String: Any] {
+    let string: [String: Any] = ["type": "string"]
+    let illustration: [String: Any] = [
+        "type": "object",
+        "properties": ["english": string, "svg": string],
+        "required": ["english", "svg"],
+        "additionalProperties": false,
+    ]
+    return [
+        "type": "object",
+        "properties": ["illustrations": ["type": "array", "items": illustration]],
+        "required": ["illustrations"],
+        "additionalProperties": false,
+    ]
 }

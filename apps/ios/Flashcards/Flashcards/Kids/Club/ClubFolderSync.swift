@@ -90,6 +90,7 @@ enum ClubFolderSync {
 
         var remoteLessons: [ClubLesson] = []
         var remoteIds: Set<UUID> = []
+        var remoteIllustrations: [UUID: Int] = [:]
         for name in self.fileNames(in: lessonsDir) where name.hasSuffix(".json") {
             guard let id = UUID(uuidString: String(name.dropLast(5))) else { continue }
             remoteIds.insert(id)
@@ -99,6 +100,7 @@ enum ClubFolderSync {
                 continue
             }
             remoteLessons.append(lesson)
+            remoteIllustrations[id] = lesson.illustrationCount
         }
 
         var bestStars = input.progress
@@ -114,7 +116,9 @@ enum ClubFolderSync {
         }
 
         // 2. Zapis lokalnych zmian
-        for lesson in input.lessons where remoteIds.contains(lesson.id) == false && deletedIds.contains(lesson.id) == false {
+        // Lekcję zapisujemy, gdy jej jeszcze nie ma albo gdy tu ma więcej obrazków (np. dorysowanych przez Claude).
+        for lesson in input.lessons where deletedIds.contains(lesson.id) == false
+            && (remoteIds.contains(lesson.id) == false || lesson.illustrationCount > (remoteIllustrations[lesson.id] ?? 0)) {
             var shared = lesson
             shared.bestStars = 0
             try self.coordinatedWrite(

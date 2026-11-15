@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -42,16 +43,14 @@ struct ClubParentGateView: View {
     }
 }
 
-/// Ustawienia rodzica: klucz API Claude i przenoszenie słówek do zwykłych fiszek.
+/// Ustawienia rodzica: klucz API Claude, lektor, przenoszenie lekcji i synchronizacja.
 struct ClubParentSettingsView: View {
     @Environment(ClubLessonStore.self) private var lessonStore: ClubLessonStore
-    @Environment(FlashcardsStore.self) private var flashcardsStore: FlashcardsStore
+    @Environment(ClubSpeaker.self) private var speaker: ClubSpeaker
     @Environment(\.dismiss) private var dismiss
 
     @State private var apiKeyDraft: String = ""
     @State private var hasSavedKey: Bool = ClubAPIKeyStore.load() != nil
-    @State private var exportingLessonId: UUID?
-    @State private var message: String?
     @State private var isFolderPickerPresented: Bool = false
     @State private var isLessonFileImporterPresented: Bool = false
 
@@ -148,42 +147,28 @@ struct ClubParentSettingsView: View {
                     """)
                 }
 
+                self.narratorSection(language: .english)
+                self.narratorSection(language: .polish)
                 Section {
-                    if self.lessonStore.lessons.isEmpty {
-                        Text("Brak lekcji.")
-                            .foregroundStyle(.secondary)
-                    }
-                    ForEach(self.lessonStore.lessons) { lesson in
-                        Button {
-                            self.export(lesson: lesson)
-                        } label: {
-                            HStack {
-                                Text(lesson.themeEmoji)
-                                VStack(alignment: .leading) {
-                                    Text(lesson.title)
-                                        .foregroundStyle(Color.primary)
-                                    Text("\(lesson.words.count) słówek")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if self.exportingLessonId == lesson.id {
-                                    ProgressView()
-                                } else {
-                                    Image(systemName: "square.and.arrow.down.on.square")
-                                }
-                            }
+                    VStack(alignment: .leading) {
+                        Text("Tempo czytania")
+                        Slider(
+                            value: Binding(get: { self.speaker.rateMultiplier }, set: { self.speaker.rateMultiplier = $0 }),
+                            in: 0.6...1.1
+                        ) {
+                            Text("Tempo czytania")
+                        } minimumValueLabel: {
+                            Image(systemName: "tortoise.fill")
+                        } maximumValueLabel: {
+                            Image(systemName: "hare.fill")
                         }
-                        .disabled(self.exportingLessonId != nil || lesson.words.isEmpty)
                     }
-                    if let message {
-                        Text(message)
-                            .foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("Dodaj słówka do zwykłych fiszek")
                 } footer: {
-                    Text("Słówka z lekcji trafią do standardowej aplikacji z powtórkami (FSRS), z tagiem „play-and-learn” i tytułem lekcji.")
+                    Text("""
+                    Najlepiej brzmią darmowe głosy „Premium” i „Rozszerzony”. Pobierzesz je w Ustawieniach iPhone'a/iPada: \
+                    Dostępność → Treść mówiona → Głosy → English (np. Serena, Daniel – Premium) oraz Polski (np. Zosia, \
+                    Krzysztof – Rozszerzony). Potem wróć tutaj i wybierz je powyżej.
+                    """)
                 }
             }
             .fileImporter(isPresented: self.$isFolderPickerPresented, allowedContentTypes: [.folder]) { result in
@@ -215,32 +200,36 @@ struct ClubParentSettingsView: View {
         }
     }
 
-    private func export(lesson: ClubLesson) {
-        guard let scope = self.flashcardsStore.spreadsheetImportScope else {
-            self.message = "Zwykła aplikacja jeszcze się przygotowuje – spróbuj za chwilę."
-            return
-        }
-        let cards = lesson.words.map { word in
-            WorkspaceSpreadsheetCard(
-                id: UUID(),
-                frontText: "\(word.emoji) \(word.english)",
-                backText: word.polish
-            )
-        }
-        self.exportingLessonId = lesson.id
-        self.message = nil
-        Task { @MainActor in
-            defer { self.exportingLessonId = nil }
-            do {
-                let count = try await self.flashcardsStore.createSpreadsheetImportCards(
-                    scope: scope,
-                    cards: cards,
-                    tags: ["play-and-learn", lesson.title]
-                )
-                self.message = "Dodano \(polishFlashcardCount(count)) z lekcji „\(lesson.title)”."
-            } catch {
-                self.message = Flashcards.errorMessage(error: error)
+    /// Wybór głosu lektora dla jednego języka + przycisk „Posłuchaj”.
+    private func narratorSection(language: ClubSpeechLanguage) -> some View {
+        let voices = ClubSpeaker.availableVoices(for: language)
+        let selectedId = self.speaker.voice(for: language)?.identifier
+        let sample = language == .english ? "Hello! This is a crayon and a paintbrush." : "Cześć! To jest kredka i pędzel."
+        return Section {
+            if voices.isEmpty {
+                Text("Brak głosu dla tego języka. Pobierz go w Ustawieniach (opis niżej).")
+                    .foregroundStyle(.secondary)
+            } else {
+                Picker("Głos", selection: Binding(
+                    get: { selectedId ?? "" },
+                    set: { self.speaker.selectVoice(identifier: $0.isEmpty ? nil : $0, for: language) }
+                )) {
+                    ForEach(voices, id: \.identifier) { voice in
+                        Text("\(voice.name) – \(clubQualityLabel(voice.quality)) (\(voice.language))")
+                            .tag(voice.identifier)
+                    }
+                }
+                if ClubSpeaker.hasHighQualityVoice(for: language) == false {
+                    Label("Zainstalowany jest tylko głos standardowy – pobierz lepszy (opis niżej).", systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
             }
+            Button("Posłuchaj", systemImage: "speaker.wave.2.fill") {
+                self.speaker.speak(sample, language: language)
+            }
+        } header: {
+            Text("Lektor – \(language.title.lowercased())")
         }
     }
 }

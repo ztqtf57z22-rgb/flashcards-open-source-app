@@ -1,4 +1,3 @@
-import AVFoundation
 import Foundation
 import Observation
 
@@ -94,6 +93,70 @@ final class ClubLessonStore {
         self.add(draft.makeLesson(id: clubDemoLessonId, now: Date()))
     }
 
+    // MARK: - Ilustracje od Claude
+
+    /// Lekcje, do których Claude właśnie rysuje obrazki, z postępem (narysowane, wszystkie).
+    private(set) var illustrationProgress: [UUID: (done: Int, total: Int)] = [:]
+    var illustrationError: String?
+
+    func isIllustrating(lessonId: UUID) -> Bool {
+        self.illustrationProgress[lessonId] != nil
+    }
+
+    /// Prosi Claude o rysunki do słówek, które jeszcze ich nie mają. Działa w tle; postęp widać w lekcji.
+    func illustrate(lessonId: UUID) {
+        guard self.isIllustrating(lessonId: lessonId) == false,
+              let lesson = self.lesson(id: lessonId) else { return }
+        guard let apiKey = ClubAPIKeyStore.load() else {
+            self.illustrationError = ClubClaudeError.missingAPIKey.errorDescription
+            return
+        }
+        let requests = lesson.words
+            .filter { $0.svg == nil }
+            .map { ClubClaudeClient.IllustrationRequest(english: $0.english, polish: $0.polish) }
+        guard requests.isEmpty == false else { return }
+        self.illustrationError = nil
+        self.illustrationProgress[lessonId] = (0, requests.count)
+
+        Task { @MainActor in
+            defer { self.illustrationProgress[lessonId] = nil }
+            do {
+                let drawings = try await ClubClaudeClient.makeIllustrations(
+                    words: requests,
+                    apiKey: apiKey,
+                    onProgress: { done, total in
+                        if ClubLessonStore.shared.illustrationProgress[lessonId] != nil {
+                            ClubLessonStore.shared.illustrationProgress[lessonId] = (done, total)
+                        }
+                    }
+                )
+                self.applyIllustrations(lessonId: lessonId, drawings: drawings)
+                if drawings.count < requests.count {
+                    self.illustrationError = "Narysowano \(drawings.count) z \(requests.count) obrazków. Brakujące możesz dorysować z menu ⋯ w lekcji."
+                }
+            } catch {
+                self.illustrationError = error.localizedDescription
+            }
+        }
+    }
+
+    private func applyIllustrations(lessonId: UUID, drawings: [String: String]) {
+        guard let index = self.lessons.firstIndex(where: { $0.id == lessonId }) else { return }
+        var changed = false
+        for wordIndex in self.lessons[index].words.indices {
+            let english = self.lessons[index].words[wordIndex].english
+            if self.lessons[index].words[wordIndex].svg == nil, let svg = drawings[english],
+               ClubSVGCache.drawing(for: svg) != nil {
+                self.lessons[index].words[wordIndex].svg = svg
+                changed = true
+            }
+        }
+        if changed {
+            self.save()
+            self.sync()
+        }
+    }
+
     // MARK: - Plik .fiszki (AirDrop)
 
     /// Wczytuje lekcje z pliku `.fiszki`. Nowe lekcje są dodawane, a przy istniejących zostaje lepszy wynik.
@@ -107,6 +170,10 @@ final class ClubLessonStore {
                 if let index = self.lessons.firstIndex(where: { $0.id == incoming.id }) {
                     if incoming.bestStars > self.lessons[index].bestStars {
                         self.lessons[index].bestStars = incoming.bestStars
+                        changed = true
+                    }
+                    if incoming.illustrationCount > self.lessons[index].illustrationCount {
+                        self.lessons[index].words = incoming.words
                         changed = true
                     }
                 } else {
@@ -213,9 +280,16 @@ final class ClubLessonStore {
             changed = true
         }
 
-        for lesson in output.remoteLessons where self.lesson(id: lesson.id) == nil && self.deletedIds.contains(lesson.id) == false {
-            self.lessons.append(lesson)
-            changed = true
+        for lesson in output.remoteLessons where self.deletedIds.contains(lesson.id) == false {
+            if let index = self.lessons.firstIndex(where: { $0.id == lesson.id }) {
+                if lesson.illustrationCount > self.lessons[index].illustrationCount {
+                    self.lessons[index].words = lesson.words
+                    changed = true
+                }
+            } else {
+                self.lessons.append(lesson)
+                changed = true
+            }
         }
 
         for index in self.lessons.indices {
@@ -263,32 +337,5 @@ final class ClubLessonStore {
         } catch {
             self.lastError = "Nie udało się zapisać lekcji: \(error.localizedDescription)"
         }
-    }
-}
-
-/// Czyta angielskie słówka na głos (brytyjski akcent, wolniej – dla dziecka).
-@MainActor
-@Observable
-final class ClubSpeaker {
-    private let synthesizer = AVSpeechSynthesizer()
-
-    func speakEnglish(_ text: String) {
-        self.speak(text, language: "en-GB")
-    }
-
-    func speakPolish(_ text: String) {
-        self.speak(text, language: "pl-PL")
-    }
-
-    private func speak(_ text: String, language: String) {
-        let cleaned = text.replacingOccurrences(of: "___", with: "…")
-        guard cleaned.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else { return }
-        if self.synthesizer.isSpeaking {
-            self.synthesizer.stopSpeaking(at: .immediate)
-        }
-        let utterance = AVSpeechUtterance(string: cleaned)
-        utterance.voice = AVSpeechSynthesisVoice(language: language)
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.85
-        self.synthesizer.speak(utterance)
     }
 }

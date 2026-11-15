@@ -1,12 +1,14 @@
 # Fiszki dla dziecka – instalacja na iPhonie i iPadzie (tylko Windows, bez Maca i bez płatnego konta)
 
-Ta wersja aplikacji (na bazie otwartoźródłowego projektu Nibomo / flashcards-open-source-app) po uruchomieniu
-pokazuje **dwa kafelki**:
+Ta wersja aplikacji (na bazie otwartoźródłowego projektu Nibomo / flashcards-open-source-app) to
+**🎨 Play & Learn Club** – kolorowa aplikacja dla dziecka. Robisz zdjęcie kartki z zajęć, a **Claude** zamienia ją
+w lekcję:
 
-1. **🎨 Play & Learn Club** – kolorowy moduł dla dziecka. Robisz zdjęcie kartki z zajęć, a **Claude** zamienia ją
-   w lekcję: słówka z obrazkami, wymowa po angielsku, quiz obrazkowy, zadania i gramatyka. Na start jest gotowa
-   lekcja przykładowa „Unit 2: Art Club”.
-2. **🗂️ Fiszki** – standardowa aplikacja z powtórkami (plus „Tryb dla dziecka” w Ustawieniach).
+- słówka z **ilustracjami rysowanymi przez Claude** (w jednym, podręcznikowym stylu),
+- **lektor**, który czyta angielskie słowa po angielsku, a polskie po polsku,
+- quiz obrazkowy, zadania z kartki i gramatyka.
+
+Na start jest gotowa lekcja przykładowa „Unit 2: Art Club” (obrazki do niej narysujesz z menu ⋯ w lekcji).
 
 **Wszystko robisz na komputerze z Windows, iPhonie i iPadzie – Mac nie jest potrzebny na żadnym etapie.**
 Aplikację kompiluje serwer GitHuba w internecie (to jego maszyna, nie Twoja). Potrzebujesz:
@@ -168,7 +170,6 @@ W **⚙️** klubu (dla rodzica) są też przyciski **Wyślij wszystkie lekcje (
 | Co | Jak się synchronizuje |
 |---|---|
 | **Lekcje klubu, gwiazdki i wyniki** | Wspólny folder w **iCloud Drive** wybrany w aplikacji (na obu urządzeniach ten sam) |
-| **Zwykłe fiszki i powtórki** | Bezpłatne konto Nibomo – na obu urządzeniach zaloguj się **tym samym e-mailem** |
 | **Klucz Claude** | Wpisz go na każdym urządzeniu (raz) – patrz krok 5 |
 
 #### Ustawienie folderu (raz na każdym urządzeniu)
@@ -177,19 +178,13 @@ W **⚙️** klubu (dla rodzica) są też przyciski **Wyślij wszystkie lekcje (
    (*Ustawienia → [Twoje imię] → iCloud → iCloud Drive*).
 2. Na iPhonie otwórz aplikację **Pliki → iCloud Drive** i utwórz folder **`Fiszki-Sync`** (przytrzymaj puste miejsce
    → *Nowy folder*). Na iPadzie już go nie tworzysz – pojawi się sam.
-3. W aplikacji **Fiszki** stuknij **🎨 Play & Learn Club → ⚙️** (prawy górny róg) → rozwiąż mnożenie →
+3. W aplikacji **Fiszki** stuknij **⚙️** (prawy górny róg) → rozwiąż mnożenie →
    **Wybierz folder synchronizacji** → **iCloud Drive → Fiszki-Sync → Otwórz**.
 4. Powtórz punkt 3 na iPadzie, wybierając **ten sam** folder.
 
 Od teraz kartka zeskanowana na iPhonie pojawi się na iPadzie i odwrotnie. To samo dotyczy gwiazdek
 (zawsze zostaje lepszy wynik) i usuniętych lekcji. Gdy klub jest otwarty, aplikacja sprawdza zmiany co ok. 30 sekund.
 Można też stuknąć **⚙️ → Synchronizuj teraz**. iCloud zwykle przesyła zmiany w kilka sekund, czasem w kilka minut.
-
-#### Zwykłe fiszki (standardowa aplikacja)
-
-W kafelku **🗂️ Fiszki** → *Ustawienia → Konto* zaloguj się **e-mailem** (dostaniesz kod), tym samym adresem na obu
-urządzeniach. Logowanie przez Apple/Google w tej wersji najpewniej nie zadziała, więc używaj e-maila.
-W *Ustawieniach* znajdziesz też **🧸 Tryb dla dziecka** i **🏠 Ekran wyboru**.
 
 ## Krok 5. Klucz Claude
 
@@ -198,19 +193,37 @@ W *Ustawieniach* znajdziesz też **🧸 Tryb dla dziecka** i **🏠 Ekran wyboru
 
 1. Na komputerze wejdź na **platform.claude.com**, załóż konto i w **Billing** dodaj np. 5 USD kredytu.
 2. **Settings → API Keys → Create Key** – skopiuj klucz (zaczyna się od `sk-ant-`) i zapisz go np. w Notatkach.
-3. Na iPhonie: **Play & Learn Club → ⚙️** → wklej klucz → **Zapisz klucz**. Na iPadzie zrób to samo
+3. Na iPhonie: **⚙️** (prawy górny róg) → rozwiąż mnożenie → wklej klucz → **Zapisz klucz**. Na iPadzie zrób to samo
    (czasem klucz przejdzie sam przez pęk kluczy iCloud – wtedy zobaczysz „Klucz jest zapisany”).
 
-> Bez klucza klub też działa, ale ze zdjęcia odczyta tylko słówka (bez zadań i gramatyki).
+> Bez klucza klub też działa, ale ze zdjęcia odczyta tylko słówka (bez zadań, gramatyki i rysunków).
 
-## Krok 6. Jak korzystać z klubu
+**Koszt:** odczyt kartki to kilka–kilkanaście groszy, a narysowanie ilustracji do ok. 20 słówek – zwykle
+ok. 0,5–1,5 zł (Claude rysuje każdy obrazek osobno). Rysunki powstają raz i zostają w lekcji.
 
-1. Kafelek **🎨 Play & Learn Club** → **Nowa kartka 📸** → **Zrób zdjęcie kartki** (aparat sam wykryje i wyprostuje
-   kartkę) albo **Wybierz z galerii**.
-2. Po ok. minucie lekcja otworzy się sama, a po chwili pojawi się też na drugim urządzeniu.
-3. W lekcji są cztery zajęcia: **🃏 Słówka** (obrazek + wymowa, stuknięcie = po polsku), **🎯 Zgadnij obrazek**,
-   **🧩 Zadania** (gwiazdka za trafienie za pierwszym razem) i **📖 Gramatyka**.
-4. **🏠** wraca do ekranu z kafelkami. W **⚙️** rodzic może też przenieść słówka z lekcji do zwykłych fiszek.
+## Krok 6. Lektor – najlepsze głosy (raz na każdym urządzeniu)
+
+Aplikacja sama wybiera najlepszy zainstalowany głos: angielski (brytyjski) do słów angielskich i polski do polskich.
+Najładniej brzmią **darmowe głosy „Premium” / „Rozszerzony”**, które trzeba raz pobrać:
+
+1. *Ustawienia → Dostępność → Treść mówiona → Głosy*.
+2. **English** → np. **Serena (Premium)** lub **Daniel (Rozszerzony)** (wersje brytyjskie) – stuknij, aby pobrać.
+3. **Polski** → **Zosia (Rozszerzony)** lub **Krzysztof (Rozszerzony)** – pobierz.
+4. W aplikacji: **⚙️ → Lektor – angielski / polski** wybierz pobrane głosy i stuknij **Posłuchaj**.
+   Tam też ustawisz **tempo czytania** (żółw = wolniej i wyraźniej).
+
+Lektor działa także przy wyciszonym iPhonie (przełącznik z boku) – głośność ustawiasz przyciskami.
+
+## Krok 7. Jak korzystać z klubu
+
+1. Po uruchomieniu od razu widać **Play & Learn Club**. Stuknij **Nowa kartka 📸** → **Zrób zdjęcie kartki**
+   (aparat sam wykryje i wyprostuje kartkę) albo **Wybierz z galerii**.
+2. Po ok. minucie lekcja otworzy się sama, a Claude zacznie **rysować obrazki** (widać pasek „Claude rysuje
+   obrazki… 5/18”). Do tego czasu przy słówkach są emoji. Brakujące rysunki dorysujesz z menu **⋯ → Narysuj obrazki (Claude)**.
+3. W lekcji są cztery zajęcia: **🃏 Słówka** (obrazek + lektor; stuknięcie odwraca kartę i czyta po polsku),
+   **🎯 Zgadnij obrazek**, **🧩 Zadania** (gwiazdka za trafienie za pierwszym razem; stuknij polecenie, by je usłyszeć)
+   i **📖 Gramatyka** (stuknij zdanie angielskie lub polskie, by je usłyszeć).
+4. W **⚙️** rodzic ustawia klucz Claude, lektora, przesyłanie lekcji i synchronizację.
 
 **Wskazówki do zdjęcia:** dobre światło, kartka płasko i w całości w kadrze.
 
@@ -230,7 +243,9 @@ W *Ustawieniach* znajdziesz też **🧸 Tryb dla dziecka** i **🏠 Ekran wyboru
 | Po AirDrop iPad nie proponuje „Fiszki” | Stuknij **Więcej…/Otwórz za pomocą** i wybierz Fiszki, albo zapisz plik w aplikacji Pliki i w klubie użyj **⚙️ → Wczytaj lekcje z pliku**. |
 | Lekcja nie pojawia się na drugim urządzeniu (synchronizacja) | Ten sam folder wybrany na obu? To samo Apple ID i iCloud Drive włączony? **⚙️ → Synchronizuj teraz**. |
 | ⚙️: „Brak dostępu do folderu synchronizacji” | **⚙️ → Zmień folder** i wybierz `Fiszki-Sync` ponownie. |
-| Fiszki nie synchronizują się | Na obu urządzeniach zaloguj się tym samym e-mailem w *Ustawienia → Konto*. |
+| Lektor brzmi „jak robot” | Pobierz głosy Premium/Rozszerzone (krok 6) i wybierz je w **⚙️ → Lektor**. |
+| Nie słychać lektora | Zwiększ głośność przyciskami z boku; sprawdź, czy nie gra inna aplikacja. |
+| Obrazek nie pasuje albo się nie narysował | W lekcji **⋯ → Narysuj obrazki (Claude)** dorysowuje brakujące; bez klucza Claude zostają emoji. |
 | Klub: „Klucz API Claude jest nieprawidłowy” | Wklej klucz ponownie w ⚙️ (cały, bez spacji); sprawdź kredyt na platform.claude.com. |
 | Klub: „Claude jest teraz bardzo zajęty” / „Za dużo zapytań” | Odczekaj minutę i spróbuj ponownie. |
 | Klub: „Nie znaleziono słówek ani zadań” | Zrób zdjęcie bliżej, w lepszym świetle, całą kartkę w kadrze. |

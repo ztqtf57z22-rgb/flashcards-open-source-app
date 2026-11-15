@@ -11,26 +11,17 @@ enum AppLaunchMode: Equatable {
 @MainActor
 @Observable
 final class AppModeModel {
-    var mode: AppLaunchMode = .chooser
+    var mode: AppLaunchMode = .club
 }
 
-/// Korzeń okna: ekran z dwoma kafelkami, zwykła aplikacja albo Play & Learn Club.
+/// Korzeń okna. Aplikacja pokazuje wyłącznie Play & Learn Club – standardowe fiszki są ukryte.
+/// (Ekran wyboru `AppModeChooserView` zostaje w kodzie, gdyby kiedyś trzeba było go przywrócić.)
 struct AppModeRootView: View {
     let model: AppModeModel
 
     var body: some View {
-        Group {
-            switch self.model.mode {
-            case .chooser:
-                AppModeChooserView(model: self.model)
-            case .standard:
-                RootTabView()
-            case .club:
-                ClubRootView()
-            }
-        }
-        .environment(self.model)
-        .animation(.easeInOut(duration: 0.25), value: self.model.mode)
+        ClubRootView()
+            .environment(self.model)
     }
 }
 
