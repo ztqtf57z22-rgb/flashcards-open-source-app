@@ -31,6 +31,7 @@ struct ReviewCardSideView: View {
     let copyRequest: ReviewCardSideCopyRequest?
 
     @State private var hasCopied: Bool = false
+    @AppStorage(kidModeEnabledStorageKey) private var isKidModeEnabled: Bool = false
     /// Restarts the copied-feedback reset task on every successful copy.
     @State private var successfulCopyCount: Int = 0
     @State private var copyError: String?
@@ -109,7 +110,12 @@ struct ReviewCardSideView: View {
                 }
             }
 
-            ReviewSelectableTextView(sourceText: self.sourceText, content: self.content, surfaceStyle: self.surfaceStyle)
+            ReviewSelectableTextView(
+                sourceText: self.sourceText,
+                content: self.content,
+                surfaceStyle: self.surfaceStyle,
+                textFont: self.isKidModeEnabled ? kidReviewTextFont(surfaceStyle: self.surfaceStyle) : nil
+            )
                 .accessibilityIdentifier(self.surfaceStyle == .front
                     ? UITestIdentifier.reviewFrontSelectableText : UITestIdentifier.reviewBackSelectableText)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -281,6 +287,14 @@ struct ReviewCardSideView: View {
     }
 
     private var backgroundStyle: AnyShapeStyle {
+        if self.isKidModeEnabled {
+            switch surfaceStyle {
+            case .front:
+                return AnyShapeStyle(KidPalette.frontGradient)
+            case .back:
+                return AnyShapeStyle(KidPalette.backGradient)
+            }
+        }
         switch surfaceStyle {
         case .front:
             return AnyShapeStyle(.thinMaterial)
@@ -329,4 +343,12 @@ private extension View {
         self.reviewCardsShortcutHelp(key: key)
         #endif
     }
+}
+
+/// Duża, czytelna czcionka fiszek w trybie dziecięcym (skaluje się z ustawieniami dostępności).
+private func kidReviewTextFont(surfaceStyle: ReviewCardSurfaceStyle) -> UIFont {
+    let size: CGFloat = surfaceStyle == .front ? 34 : 30
+    let base = UIFont.systemFont(ofSize: size, weight: .bold)
+    let rounded = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: size) } ?? base
+    return UIFontMetrics(forTextStyle: .body).scaledFont(for: rounded)
 }

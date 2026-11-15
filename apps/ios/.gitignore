@@ -12,3 +12,4 @@ build/
 
 # Local iOS configuration
 **/Local.xcconfig
+**/Personal.xcconfig

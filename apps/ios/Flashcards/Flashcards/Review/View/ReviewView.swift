@@ -27,6 +27,7 @@ struct ReviewView: View {
     @Environment(PremiumPresenter.self) var premiumPresenter: PremiumPresenter
     @Environment(ReviewScreenModel.self) var reviewScreen: ReviewScreenModel
     @State private var isTextInputEditing: Bool = false
+    @AppStorage(kidModeEnabledStorageKey) private var isKidModeEnabled: Bool = false
 
     @StateObject private var reviewSpeechController = ReviewSpeechController()
     @State private var textSelection: ReviewCardTextSelection? = nil
@@ -857,6 +858,11 @@ struct ReviewView: View {
             .foregroundStyle(.secondary)
             // A new card starts its chips from the first tag.
             .id(card.cardId)
+
+            if self.isKidModeEnabled {
+                KidCardPictureBanner(frontText: card.frontText, backText: card.backText)
+                    .id(card.cardId)
+            }
 
             ReviewCardSideView(
                 label: String(localized: "Front", table: reviewCardsStringsTableName),

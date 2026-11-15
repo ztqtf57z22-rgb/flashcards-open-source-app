@@ -1,0 +1,102 @@
+# Buduje plik Fiszki.ipa (iPhone + iPad) na Macu w chmurze GitHuba – bez płatnego konta Apple.
+# Plik jest niepodpisany: podpisuje go AltStore Twoim darmowym Apple ID przy instalacji.
+# Nie wymaga żadnych sekretów. Instrukcja: INSTRUKCJA-iOS.md.
+#
+# Opcjonalne zmienne (Settings → Secrets and variables → Actions → Variables):
+#   APP_DISPLAY_NAME – nazwa pod ikoną (domyślnie „Fiszki”)
+
+name: iOS – zbuduj plik IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/ios/**"
+      - ".github/workflows/ios-build-ipa.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-build-ipa
+  cancel-in-progress: true
+
+jobs:
+  ipa:
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      PROJECT: apps/ios/Flashcards/Flashcards Open Source App.xcodeproj
+      SCHEME: Flashcards Open Source App
+      CONFIG_DIR: apps/ios/Flashcards/Config
+    steps:
+      - name: Pobierz kod
+        uses: actions/checkout@v4
+
+      - name: Wybierz najnowszy stabilny Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Przygotuj konfigurację
+        env:
+          APP_DISPLAY_NAME: ${{ vars.APP_DISPLAY_NAME || 'Fiszki' }}
+        run: |
+          cp "$CONFIG_DIR/Local.xcconfig.example" "$CONFIG_DIR/Local.xcconfig"
+          {
+            echo "APP_BUNDLE_IDENTIFIER = pl.fiszki.dladziecka"
+            echo "APP_DISPLAY_NAME = $APP_DISPLAY_NAME"
+            echo "APP_CURRENT_PROJECT_VERSION = $((1000 + GITHUB_RUN_NUMBER))"
+          } > "$CONFIG_DIR/Personal.xcconfig"
+
+      - name: Zbuduj aplikację (bez podpisu)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build | tee "$RUNNER_TEMP/build.log"
+
+      - name: Spakuj Fiszki.ipa
+        run: |
+          set -euo pipefail
+          products="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos"
+          app="$(find "$products" -maxdepth 1 -name '*.app' -print -quit)"
+          if [ -z "$app" ]; then
+            echo "::error::Nie znaleziono zbudowanej aplikacji w $products"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$app" "$RUNNER_TEMP/ipa/Payload/"
+          bundle="$RUNNER_TEMP/ipa/Payload/$(basename "$app")"
+          # Darmowe konto Apple pozwala na mało identyfikatorów aplikacji tygodniowo,
+          # dlatego usuwamy aplikację na zegarek i widżety – sama aplikacja działa bez nich.
+          rm -rf "$bundle/Watch" "$bundle/PlugIns" "$bundle/Extensions"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$GITHUB_WORKSPACE/Fiszki.ipa" Payload)
+          ls -lh "$GITHUB_WORKSPACE/Fiszki.ipa"
+          {
+            echo "### Gotowe! 🎉"
+            echo "Pobierz **Fiszki-ipa** z sekcji *Artifacts* poniżej, rozpakuj i zainstaluj plik Fiszki.ipa przez AltStore."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Udostępnij plik do pobrania
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fiszki-ipa
+          path: Fiszki.ipa
+          retention-days: 30
+
+      - name: Zachowaj log przy błędzie
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-budowania
+          path: ${{ runner.temp }}/build.log
+          if-no-files-found: ignore

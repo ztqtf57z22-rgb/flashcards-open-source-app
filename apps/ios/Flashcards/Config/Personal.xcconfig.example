@@ -1,0 +1,12 @@
+// Skopiuj ten plik jako Personal.xcconfig (jest ignorowany przez git) i wpisz własne wartości.
+// Dzięki temu zainstalujesz aplikację na swoim iPhonie z własnego konta Apple.
+
+// 10-znakowy identyfikator zespołu: Xcode → Settings → Accounts → (Twoje konto) → Team ID,
+// albo developer.apple.com/account → Membership details → Team ID.
+DEVELOPMENT_TEAM = ABCDE12345
+
+// Unikalny identyfikator aplikacji – dowolny, ale tylko Twój (małe litery, kropki, bez polskich znaków).
+APP_BUNDLE_IDENTIFIER = pl.mojadomena.fiszki
+
+// Nazwa pod ikoną na ekranie iPhone'a.
+APP_DISPLAY_NAME = Fiszki

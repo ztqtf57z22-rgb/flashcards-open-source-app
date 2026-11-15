@@ -18,6 +18,8 @@ struct SettingsView: View {
     @Environment(SettingsScrollModel.self) private var settingsScroll: SettingsScrollModel
 
     @State private var isCloudSignInPresented: Bool = false
+    @AppStorage(kidModeEnabledStorageKey) private var isKidModeEnabled: Bool = false
+    @Environment(AppModeModel.self) private var appMode: AppModeModel?
     @State private var isFriendInvitePresented: Bool = false
 
     private var accountStatusValue: String {
@@ -124,6 +126,33 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier(UITestIdentifier.settingsSubscriptionRow)
                 .rememberedListRow(id: UITestIdentifier.settingsSubscriptionRow)
+            }
+
+            Section {
+                if let appMode = self.appMode {
+                    Button {
+                        appMode.mode = .chooser
+                    } label: {
+                        Label {
+                            Text("Ekran wyboru (Play & Learn Club)")
+                                .foregroundStyle(Color.primary)
+                        } icon: {
+                            Text("🏠")
+                        }
+                    }
+                }
+                Toggle(isOn: self.$isKidModeEnabled) {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Tryb dla dziecka")
+                            Text("Jasne kolory, duże litery i obrazki na fiszkach")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Text("🧸")
+                    }
+                }
             }
 
             Section(aiSettingsLocalized("settings.section.style", "Style")) {

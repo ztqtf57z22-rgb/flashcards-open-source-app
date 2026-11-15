@@ -94,6 +94,8 @@ struct FlashcardsApp: App {
     @State private var progressScreenState: ProgressScreenState
     @State private var catalogIndexStore: CatalogIndexStore
     @State private var progressContextWatcherRefreshToken: Int
+    @AppStorage(kidModeEnabledStorageKey) private var isKidModeEnabled: Bool = false
+    @State private var appMode = AppModeModel()
     @State private var uiTestLaunchScenario: FlashcardsUITestLaunchScenario?
     @State private var uiTestAIHandoffCard: FlashcardsUITestAIHandoffCard?
     @State private var hasRunInitialStartup: Bool
@@ -239,13 +241,14 @@ struct FlashcardsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ReviewKeyCommandOwner { RootTabView() }
+            ReviewKeyCommandOwner { AppModeRootView(model: self.appMode) }
                 #if targetEnvironment(macCatalyst)
                 .macSidebarCommandOwner()
                 #endif
-                .tint(store.displayedAccountAccentColor.color)
-                .accentColor(store.displayedAccountAccentColor.color)
-                .preferredColorScheme(store.effectiveAccountTheme.colorScheme)
+                // Tryb dziecięcy: zawsze jasny motyw i wesoły pomarańczowy akcent.
+                .tint(self.isKidModeEnabled ? KidPalette.orange : store.displayedAccountAccentColor.color)
+                .accentColor(self.isKidModeEnabled ? KidPalette.orange : store.displayedAccountAccentColor.color)
+                .preferredColorScheme(self.isKidModeEnabled || self.appMode.mode != .standard ? .light : store.effectiveAccountTheme.colorScheme)
                 .onOpenURL { url in
                     if let widgetDeepLink = parseWidgetDeepLinkURL(url: url) {
                         self.pendingWidgetDeepLink = widgetDeepLink
