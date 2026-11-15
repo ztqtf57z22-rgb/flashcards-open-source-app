@@ -24,7 +24,8 @@ concurrency:
 
 jobs:
   ipa:
-    runs-on: macos-26
+    # Projekt wymaga Xcode 27 (format ikon Icon Composer); na GitHubie jest w obrazie „xcode-27”.
+    runs-on: xcode-27
     timeout-minutes: 90
     env:
       PROJECT: apps/ios/Flashcards/Flashcards Open Source App.xcodeproj

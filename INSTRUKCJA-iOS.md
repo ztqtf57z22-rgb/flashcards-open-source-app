@@ -196,7 +196,7 @@ W *Ustawieniach* znajdziesz też **🧸 Tryb dla dziecka** i **🏠 Ekran wyboru
 
 | Problem | Rozwiązanie |
 |---|---|
-| GitHub: błąd „runner macos-26 not found” | W pliku `.github/workflows/ios-build-ipa.yml` zmień `macos-26` na `macos-latest`. |
+| GitHub: przebieg długo czeka na start („Queued”) | Serwer z Xcode 27 (`xcode-27`) bywa oblegany – poczekaj albo uruchom ponownie później. |
 | GitHub: czerwony ❌ przy budowaniu | Pobierz artefakt **log-budowania** i pokaż go Claude. |
 | SideStore: odświeżanie nie działa | Czy **LocalDevVPN** jest połączony (Connect) i jesteś w Wi-Fi? Jeśli tak – wymień plik parowania (krok 3B, ramka na dole). |
 | iloader nie widzi urządzenia | Zainstaluj iTunes ze strony apple.com, podłącz kablem, odblokuj urządzenie i stuknij „Zaufaj”. Przy problemach z iloader pomoc jest na serwerze Discord „idevice” (link w dokumentacji SideStore). |
