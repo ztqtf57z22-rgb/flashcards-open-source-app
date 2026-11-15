@@ -46,20 +46,24 @@ struct WorksheetDocumentScanner: UIViewControllerRepresentable {
             didFinishWith scan: VNDocumentCameraScan
         ) {
             let images = (0..<scan.pageCount).map { scan.imageOfPage(at: $0) }
+            // Do zadania przekazujemy tylko domknięcie (@MainActor, więc Sendable), a nie cały koordynator.
+            let onScan = self.onScan
             Task { @MainActor in
-                self.onScan(images)
+                onScan(images)
             }
         }
 
         func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+            let onCancel = self.onCancel
             Task { @MainActor in
-                self.onCancel()
+                onCancel()
             }
         }
 
         func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFailWithError error: Error) {
+            let onFailure = self.onFailure
             Task { @MainActor in
-                self.onFailure(error)
+                onFailure(error)
             }
         }
     }
