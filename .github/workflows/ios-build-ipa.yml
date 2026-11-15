@@ -50,6 +50,26 @@ jobs:
             echo "APP_CURRENT_PROJECT_VERSION = $((1000 + GITHUB_RUN_NUMBER))"
           } > "$CONFIG_DIR/Personal.xcconfig"
 
+      - name: Pomiń aplikację na zegarek
+        # Darmowe Apple ID i tak jej nie obsłuży, a narzędzie do ikon (actool) wysypuje się
+        # przy jej kompilacji na serwerach GitHuba. Zmiana dotyczy tylko tego budowania.
+        run: |
+          python3 - <<'PY'
+          path = "apps/ios/Flashcards/Flashcards Open Source App.xcodeproj/project.pbxproj"
+          text = open(path, encoding="utf-8").read()
+          lines = text.split("\n")
+          drop = (
+              "A10000000000000000000080 /* PBXTargetDependency */,",
+              "A1000000000000000000007D /* Embed Watch Content */,",
+          )
+          kept = [line for line in lines if line.strip() not in drop]
+          removed = len(lines) - len(kept)
+          if removed != 2:
+              raise SystemExit(f"Oczekiwano 2 wpisów zegarka do usunięcia, znaleziono {removed}")
+          open(path, "w", encoding="utf-8").write("\n".join(kept))
+          print("Aplikacja na zegarek odpięta od głównej aplikacji.")
+          PY
+
       - name: Zbuduj aplikację (bez podpisu)
         run: |
           set -o pipefail
