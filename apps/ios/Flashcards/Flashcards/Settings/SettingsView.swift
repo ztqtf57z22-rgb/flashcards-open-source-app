@@ -18,7 +18,6 @@ struct SettingsView: View {
     @Environment(SettingsScrollModel.self) private var settingsScroll: SettingsScrollModel
 
     @State private var isCloudSignInPresented: Bool = false
-    @AppStorage(kidModeEnabledStorageKey) private var isKidModeEnabled: Bool = false
     @Environment(AppModeModel.self) private var appMode: AppModeModel?
     @State private var isFriendInvitePresented: Bool = false
 
@@ -141,7 +140,10 @@ struct SettingsView: View {
                         }
                     }
                 }
-                Toggle(isOn: self.$isKidModeEnabled) {
+                Toggle(isOn: Binding(
+                    get: { KidModeSettings.shared.isEnabled },
+                    set: { KidModeSettings.shared.isEnabled = $0 }
+                )) {
                     Label {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Tryb dla dziecka")

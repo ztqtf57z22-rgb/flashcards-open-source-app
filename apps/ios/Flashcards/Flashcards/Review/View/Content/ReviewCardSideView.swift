@@ -31,7 +31,8 @@ struct ReviewCardSideView: View {
     let copyRequest: ReviewCardSideCopyRequest?
 
     @State private var hasCopied: Bool = false
-    @AppStorage(kidModeEnabledStorageKey) private var isKidModeEnabled: Bool = false
+    /// Tryb dla dziecka – zwykła właściwość (nie @AppStorage, które blokowało start aplikacji, patrz KidModeSettings).
+    private var isKidModeEnabled: Bool { KidModeSettings.shared.isEnabled }
     /// Restarts the copied-feedback reset task on every successful copy.
     @State private var successfulCopyCount: Int = 0
     @State private var copyError: String?

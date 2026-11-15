@@ -94,7 +94,8 @@ struct FlashcardsApp: App {
     @State private var progressScreenState: ProgressScreenState
     @State private var catalogIndexStore: CatalogIndexStore
     @State private var progressContextWatcherRefreshToken: Int
-    @AppStorage(kidModeEnabledStorageKey) private var isKidModeEnabled: Bool = false
+    /// Tryb dla dziecka – zwykła właściwość (nie @AppStorage, które blokowało start aplikacji, patrz KidModeSettings).
+    private var isKidModeEnabled: Bool { KidModeSettings.shared.isEnabled }
     @State private var appMode = AppModeModel()
     @State private var uiTestLaunchScenario: FlashcardsUITestLaunchScenario?
     @State private var uiTestAIHandoffCard: FlashcardsUITestAIHandoffCard?

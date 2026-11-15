@@ -27,7 +27,8 @@ struct ReviewView: View {
     @Environment(PremiumPresenter.self) var premiumPresenter: PremiumPresenter
     @Environment(ReviewScreenModel.self) var reviewScreen: ReviewScreenModel
     @State private var isTextInputEditing: Bool = false
-    @AppStorage(kidModeEnabledStorageKey) private var isKidModeEnabled: Bool = false
+    /// Tryb dla dziecka – zwykła właściwość (nie @AppStorage, które blokowało start aplikacji, patrz KidModeSettings).
+    private var isKidModeEnabled: Bool { KidModeSettings.shared.isEnabled }
 
     @StateObject private var reviewSpeechController = ReviewSpeechController()
     @State private var textSelection: ReviewCardTextSelection? = nil

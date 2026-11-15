@@ -1,8 +1,30 @@
+import Observation
 import SwiftUI
 
 /// Tryb dziecięcy: jasny, kolorowy wygląd z dużymi literami i obrazkami (emoji) na fiszkach.
 /// Ustawienie jest lokalne dla urządzenia (nie synchronizuje się z kontem).
 let kidModeEnabledStorageKey: String = "kidMode.enabled"
+
+/// Przełącznik trybu dziecięcego zapisywany w UserDefaults.
+///
+/// Celowo NIE używamy `@AppStorage`: SwiftUI nasłuchuje wtedy wszystkich zmian UserDefaults, a moduł analityki
+/// zapisuje UserDefaults z wątku w tle, trzymając własną blokadę. Przy starcie aplikacji kończyło się to
+/// zakleszczeniem (czarny ekran i zamknięcie przez iOS po ~20 s, kod 0x8BADF00D).
+@MainActor
+@Observable
+final class KidModeSettings {
+    static let shared = KidModeSettings()
+
+    var isEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(self.isEnabled, forKey: kidModeEnabledStorageKey)
+        }
+    }
+
+    private init() {
+        self.isEnabled = UserDefaults.standard.bool(forKey: kidModeEnabledStorageKey)
+    }
+}
 
 /// Kolorowa paleta trybu dziecięcego.
 enum KidPalette {
