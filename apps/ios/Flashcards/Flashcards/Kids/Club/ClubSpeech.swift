@@ -2,6 +2,7 @@ import AVFoundation
 import Foundation
 import NaturalLanguage
 import Observation
+import UIKit
 
 /// Język, w którym lektor ma przeczytać tekst.
 enum ClubSpeechLanguage: String, CaseIterable, Sendable {
@@ -39,10 +40,14 @@ enum ClubSpeechLanguage: String, CaseIterable, Sendable {
 ///
 /// Używa najlepszych głosów zainstalowanych na urządzeniu (Premium → Rozszerzony → standardowy).
 /// Głosy Premium/Rozszerzone są darmowe; pobiera się je w Ustawieniach iOS (patrz ustawienia rodzica w klubie).
+///
+/// Odporność na „znikający lektor”: po szybkim przesuwaniu fiszek (zatrzymaj → od razu mów) AVSpeechSynthesizer
+/// potrafi zawiesić się bez dźwięku. Dlatego przy przerwaniu bierzemy świeży syntezator, a strażnik sprawdza,
+/// czy mowa naprawdę ruszyła – jeśli nie, powtarza zdanie na nowym syntezatorze.
 @MainActor
 @Observable
 final class ClubSpeaker {
-    /// Tempo mowy względem domyślnego (0.6–1.0); wolniej = wyraźniej dla dziecka.
+    /// Tempo mowy względem domyślnego (0.6–1.1); wolniej = wyraźniej dla dziecka.
     var rateMultiplier: Double {
         didSet {
             UserDefaults.standard.set(self.rateMultiplier, forKey: Self.rateKey)
@@ -52,14 +57,26 @@ final class ClubSpeaker {
     private(set) var englishVoiceId: String?
     private(set) var polishVoiceId: String?
 
-    private let synthesizer = AVSpeechSynthesizer()
+    @ObservationIgnored private var synthesizer = AVSpeechSynthesizer()
+    @ObservationIgnored private let delegate = ClubSpeechDelegate()
+    @ObservationIgnored private var pendingUtterance: AVSpeechUtterance?
+    @ObservationIgnored private var startedUtterances: Set<ObjectIdentifier> = []
+    @ObservationIgnored private var isAudioSessionReady: Bool = false
+    @ObservationIgnored private var observers: [NSObjectProtocol] = []
     private static let rateKey = "club.speech.rate"
+    /// Ile czekamy, aż mowa ruszy (pierwsze użycie głosu Premium potrafi chwilę się wczytywać).
+    private static let startTimeout: Duration = .milliseconds(1500)
 
     init() {
         let storedRate = UserDefaults.standard.double(forKey: Self.rateKey)
         self.rateMultiplier = storedRate > 0 ? storedRate : 0.85
         self.englishVoiceId = UserDefaults.standard.string(forKey: ClubSpeechLanguage.english.voiceDefaultsKey)
         self.polishVoiceId = UserDefaults.standard.string(forKey: ClubSpeechLanguage.polish.voiceDefaultsKey)
+        self.delegate.onStart = { [weak self] id in
+            _ = self?.startedUtterances.insert(id)
+        }
+        self.synthesizer.delegate = self.delegate
+        self.observeAudioSession()
     }
 
     // MARK: - Czytanie
@@ -80,20 +97,99 @@ final class ClubSpeaker {
     func speak(_ text: String, language: ClubSpeechLanguage) {
         let spoken = clubSpeakableText(text)
         guard spoken.isEmpty == false else { return }
-        self.activateAudioSession()
-        if self.synthesizer.isSpeaking {
+        self.prepareAudioSession()
+
+        // Przerywamy poprzednie słowo na NOWYM syntezatorze – stary po „stop” bywa niemy.
+        if self.synthesizer.isSpeaking || self.synthesizer.isPaused || self.pendingUtterance != nil {
             self.synthesizer.stopSpeaking(at: .immediate)
+            self.replaceSynthesizer()
         }
+
         let utterance = AVSpeechUtterance(string: spoken)
         utterance.voice = self.voice(for: language)
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate * Float(self.rateMultiplier)
         utterance.pitchMultiplier = 1.0
-        utterance.preUtteranceDelay = 0.05
-        self.synthesizer.speak(utterance)
+        utterance.prefersAssistiveTechnologySettings = false
+        self.start(utterance: utterance, isRetry: false)
     }
 
     func stop() {
-        self.synthesizer.stopSpeaking(at: .immediate)
+        self.pendingUtterance = nil
+        if self.synthesizer.isSpeaking || self.synthesizer.isPaused {
+            self.synthesizer.stopSpeaking(at: .immediate)
+            self.replaceSynthesizer()
+        }
+    }
+
+    private func start(utterance: AVSpeechUtterance, isRetry: Bool) {
+        self.pendingUtterance = utterance
+        let id = ObjectIdentifier(utterance)
+        self.synthesizer.speak(utterance)
+
+        // Strażnik: jeśli mowa nie ruszyła, odtwarzamy zdanie jeszcze raz na świeżym syntezatorze.
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.startTimeout)
+            guard let self, let pending = self.pendingUtterance, ObjectIdentifier(pending) == id else { return }
+            if self.startedUtterances.contains(id) {
+                self.startedUtterances.remove(id)
+                return
+            }
+            guard isRetry == false, let retry = pending.copy() as? AVSpeechUtterance else {
+                self.pendingUtterance = nil
+                return
+            }
+            self.synthesizer.stopSpeaking(at: .immediate)
+            self.replaceSynthesizer()
+            self.isAudioSessionReady = false
+            self.prepareAudioSession()
+            self.start(utterance: retry, isRetry: true)
+        }
+    }
+
+    private func replaceSynthesizer() {
+        self.synthesizer.delegate = nil
+        self.synthesizer = AVSpeechSynthesizer()
+        self.synthesizer.delegate = self.delegate
+        self.startedUtterances.removeAll()
+    }
+
+    // MARK: - Sesja audio
+
+    /// Mowa ma być słyszalna także przy wyciszonym iPhonie (przełącznik z boku), a inne dźwięki na chwilę ściszone.
+    /// Ustawiamy sesję raz; ponownie dopiero po przerwaniu (telefon, alarm, Siri) lub zmianie słuchawek.
+    private func prepareAudioSession() {
+        guard self.isAudioSessionReady == false else { return }
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            try session.setActive(true)
+            self.isAudioSessionReady = true
+        } catch {
+            self.isAudioSessionReady = false
+        }
+    }
+
+    private func observeAudioSession() {
+        let center = NotificationCenter.default
+        let names: [Notification.Name] = [
+            AVAudioSession.interruptionNotification,
+            AVAudioSession.routeChangeNotification,
+            AVAudioSession.mediaServicesWereResetNotification,
+            UIApplication.didBecomeActiveNotification,
+        ]
+        for name in names {
+            let resetsServices = name == AVAudioSession.mediaServicesWereResetNotification
+            let observer = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.isAudioSessionReady = false
+                    if resetsServices {
+                        self.replaceSynthesizer()
+                    }
+                }
+            }
+            self.observers.append(observer)
+        }
     }
 
     // MARK: - Wybór głosu
@@ -139,11 +235,18 @@ final class ClubSpeaker {
         self.availableVoices(for: language).contains { $0.quality != .default }
     }
 
-    /// Mowa ma być słyszalna także przy wyciszonym iPhonie (przełącznik z boku), a inne dźwięki na chwilę ściszone.
-    private func activateAudioSession() {
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-        try? session.setActive(true)
+}
+
+/// Delegat syntezatora: melduje, że zdanie naprawdę zaczęło być czytane (dla strażnika w ClubSpeaker).
+final class ClubSpeechDelegate: NSObject, AVSpeechSynthesizerDelegate {
+    var onStart: (@MainActor (ObjectIdentifier) -> Void)?
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        let id = ObjectIdentifier(utterance)
+        let onStart = self.onStart
+        Task { @MainActor in
+            onStart?(id)
+        }
     }
 }
 
